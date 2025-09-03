@@ -78,7 +78,7 @@ router.post("/deposit", async (req, res) => {
   }
 });
 
-const AGENT_CODE = "MjXxkEv3mpLtsQJD";
+const AGENT_CODE = process.env.RAMEEPAY_AGENT_CODE;
 const RAMEEPAY_API = "https://apis.rameepay.io/order/generate";
 
 router.post("/ramee/deposit", async (req, res) => {
@@ -86,7 +86,8 @@ router.post("/ramee/deposit", async (req, res) => {
     const orderData = req.body; // { orderid, amount, currency, redirect_url, callback_url, merchantid }
 
     // Encrypt payload
-    const encryptedData = encryptData(orderData);
+    const encryptedData =
+      "oMx0Eb4GsK+rw2LhwUefhw1yL/t8c3n/1D+mNqpPjzhXCv8/9IjahFZV3zZMbRfCQZx4zR0M3V9KWxk5UqI5B72C37OAmmrfAx03xxmY8HJBps9TJxmuz2HNHtvv/G8xz/HhNNrox4Q0VQmHmHu48uXijXbLNs8HHu6F0AW0ug/nRL04fmgMOY7bH1oNYbNLUmHFYPtbBXwXvSToMQGfouHVnlpVgUmoVpoFPHImNesiG7aRbg3QyXQYKkBRa4VVhPASOlMTRnB2Ro0a5lgmbmtXSYPlr94XoKbvCyildvT6xYict55MsFBMuK1Y6zW4vspVLbCD48H78RqqxCil/Q==";
     console.log(encryptedData);
 
     const body = {
