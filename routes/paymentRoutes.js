@@ -83,13 +83,13 @@ const ORDER_GENERATE_URL = "https://apis.rameepay.io/order/generate";
 
 router.post("/ramee/deposit", async (req, res) => {
   try {
-    const { amount, accountNo } = req.body;
+    const { amount, merchantid } = req.body;
 
     const orderData = {
       orderid: "ORD" + Date.now(),
       amount,
-      merchantid: accountNo,
       currency: "INR",
+      merchantid,
       redirectUrl: "https://www.billiondollarfx.com/live-accounts",
       callbackUrl:
         "https://winprofx-backend.onrender.com/api/payment/rameePay/callback",
@@ -97,11 +97,9 @@ router.post("/ramee/deposit", async (req, res) => {
 
     console.log("📝 Order Data:", orderData);
 
-    // Encrypt request
     const encryptedReq = encryptData(orderData);
     console.log("🔐 Encrypted Request:", encryptedReq);
 
-    // Send to RameePay
     const response = await axios.post(
       ORDER_GENERATE_URL,
       { reqData: encryptedReq, agentCode: RAMEE_AGENT_CODE },
@@ -110,11 +108,10 @@ router.post("/ramee/deposit", async (req, res) => {
 
     console.log("📩 Ramee Response:", response.data);
 
-    // Validate response before decrypting
     if (
       !response.data ||
       !response.data.data ||
-      response.data.status !== "true"
+      (response.data.status !== true && response.data.status !== "true")
     ) {
       return res.status(400).json({
         success: false,
@@ -123,7 +120,6 @@ router.post("/ramee/deposit", async (req, res) => {
       });
     }
 
-    // Decrypt response
     const decrypted = decryptData(response.data.data);
     console.log("🔓 Decrypted Response:", decrypted);
 
