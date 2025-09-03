@@ -91,14 +91,14 @@ router.post("/ramee/deposit", async (req, res) => {
       accountNo,
       redirect_url: "https://www.billiondollarfx.com/live-accounts",
       callback_url:
-        "https://winprofx-backend.onrender.com/api/payment/rameePay/callback",
+        "https://billiondollarfx-backend.onrender.com/api/payment/rameePay/callback",
     };
 
-    console.log("📝 Order Data:", orderData);
+    // console.log("📝 Order Data:", orderData);
 
     // Encrypt request
     const encryptedReq = encryptData(orderData);
-    console.log("🔐 Encrypted Request:", encryptedReq);
+    // console.log("🔐 Encrypted Request:", encryptedReq);
 
     // Send to RameePay
     const response = await axios.post(
@@ -107,7 +107,7 @@ router.post("/ramee/deposit", async (req, res) => {
       { headers: { "Content-Type": "application/json" } }
     );
 
-    console.log("📩 Ramee Response:", response.data);
+    // console.log("📩 Ramee Response:", response.data);
 
     // Validate response before decrypting
     if (
