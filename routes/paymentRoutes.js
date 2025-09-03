@@ -88,10 +88,10 @@ router.post("/ramee/deposit", async (req, res) => {
     const orderData = {
       orderid: "ORD" + Date.now(),
       amount,
-      accountNo,
+      merchantid: accountNo,
       currency: "INR",
-      redirect_url: "https://www.billiondollarfx.com/live-accounts",
-      callback_url:
+      redirectUrl: "https://www.billiondollarfx.com/live-accounts",
+      callbackUrl:
         "https://winprofx-backend.onrender.com/api/payment/rameePay/callback",
     };
 
