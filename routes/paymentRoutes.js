@@ -78,102 +78,45 @@ router.post("/deposit", async (req, res) => {
   }
 });
 
-function encryptAESGCM(secretKey, data) {
-  if (Buffer.byteLength(secretKey) !== 32) {
-    throw new Error("Secret key must be 32 bytes for AES-256-GCM");
-  }
-
-  const iv = crypto.randomBytes(12);
-  const cipher = crypto.createCipheriv(
-    "aes-256-gcm",
-    Buffer.from(secretKey),
-    iv
-  );
-
-  const encrypted = Buffer.concat([
-    cipher.update(data, "utf8"),
-    cipher.final(),
-  ]);
-  const tag = cipher.getAuthTag();
-
-  const encryptedBuffer = Buffer.concat([iv, encrypted, tag]);
-
-  return encryptedBuffer.toString("base64");
-}
-
-function decryptAESGCM(secretKey, encryptedData) {
-  if (Buffer.byteLength(secretKey) !== 32) {
-    throw new Error("Secret key must be 32 bytes for AES-256-GCM");
-  }
-
-  const data = Buffer.from(encryptedData, "base64");
-
-  const iv = data.slice(0, 12);
-  const tag = data.slice(data.length - 16);
-  const encryptedText = data.slice(12, data.length - 16);
-
-  const decipher = crypto.createDecipheriv(
-    "aes-256-gcm",
-    Buffer.from(secretKey),
-    iv
-  );
-  decipher.setAuthTag(tag);
-
-  const decrypted = Buffer.concat([
-    decipher.update(encryptedText),
-    decipher.final(),
-  ]);
-  return decrypted.toString("utf8");
-}
-
 const AGENT_CODE = process.env.RAMEEPAY_AGENT_CODE;
+const RAMEEPAY_API = "https://apis.rameepay.io/order/generate";
 
 router.post("/ramee/deposit", async (req, res) => {
   try {
-    const orderData = req.body; // whatever you send in Postman
+    const orderData = req.body; // { orderid, amount, currency, redirect_url, callback_url, merchantid }
 
-    // Encrypt orderData
-    const encryptedPayload = encryptAESGCM(
-      process.env.RAMEEPAY_SECRET_KEY,
-      JSON.stringify(orderData)
-    );
+    // Encrypt payload
+    const encryptedData = encryptData(orderData);
+    console.log(encryptData);
 
-    // Prepare body for Rameepay API
-    const requestBody = {
-      reqData: encryptedPayload,
+    const body = {
+      reqData: encryptedData,
       agentCode: AGENT_CODE,
     };
 
-    // Call Rameepay API
-    const response = await axios.post(
-      "https://apis.rameepay.io/order/generate",
-      requestBody,
-      { headers: { "Content-Type": "application/json" } }
-    );
+    // Send to RameePay
+    const { data } = await axios.post(RAMEEPAY_API, body, {
+      headers: { "Content-Type": "application/json" },
+    });
 
-    // Decrypt response if contains "data"
-    let decryptedResponse = null;
-    if (response.data.data) {
-      decryptedResponse = decryptAESGCM(
-        process.env.RAMEEPAY_SECRET_KEY,
-        response.data.data
-      );
+    console.log("🔐 Raw Response:", data);
+
+    let decryptedResponse = {};
+    if (data.data) {
+      decryptedResponse = decryptData(data.data);
+      console.log("✅ Decrypted Response:", decryptedResponse);
     }
 
     res.json({
-      rawRequest: orderData,
-      encryptedRequest: encryptedPayload,
-      rawResponse: response.data,
-      decryptedResponse: decryptedResponse
-        ? JSON.parse(decryptedResponse)
-        : null,
+      raw: data,
+      decrypted: decryptedResponse,
     });
   } catch (err) {
-    console.error("Error:", err.message);
-    res.status(500).json({
-      error: err.message,
-      details: err.response ? err.response.data : null,
-    });
+    console.error(
+      "❌ Order Generate Error:",
+      err.response?.data || err.message
+    );
+    res.status(500).json({ error: "Order generate failed" });
   }
 });
 

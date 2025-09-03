@@ -2,44 +2,46 @@
 const crypto = require("crypto");
 require("dotenv").config();
 
-const SECRET_KEY = process.env.RAMEEPAY_SECRET_KEY; // must be 32 bytes
-const SECRET_IV = process.env.RAMEEPAY_SECRET_IV; // provided by Ramee (must be 12 or 16 bytes depending on config)
+const SECRET_KEY = process.env.RAMEEPAY_SECRET_KEY;
+const SECRET_IV = process.env.RAMEEPAY_SECRET_IV; // must be at least 12 bytes
 
 // AES-256-GCM encryption
 function encryptData(data) {
-  const iv = Buffer.from(SECRET_IV, "utf8"); // use fixed IV from dashboard
-  const cipher = crypto.createCipheriv(
-    "aes-256-gcm",
-    Buffer.from(SECRET_KEY),
-    iv
-  );
+  const jsonData = JSON.stringify(data);
 
-  const encrypted = Buffer.concat([
-    cipher.update(JSON.stringify(data), "utf8"),
-    cipher.final(),
-  ]);
-  const tag = cipher.getAuthTag();
+  const key = crypto.createHash("sha256").update(SECRET_KEY).digest(); // 32-byte key
+  const iv = Buffer.from(SECRET_IV, "utf8").slice(0, 12); // GCM needs 12 bytes
 
-  return Buffer.concat([iv, tag, encrypted]).toString("base64");
+  const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);
+
+  let encrypted = cipher.update(jsonData, "utf8");
+  encrypted = Buffer.concat([encrypted, cipher.final()]);
+
+  const authTag = cipher.getAuthTag();
+
+  // combine cipher text + authTag and return base64
+  const combined = Buffer.concat([encrypted, authTag]);
+  return combined.toString("base64");
 }
 
 // AES-256-GCM decryption
-function decryptData(encryptedData) {
-  const bData = Buffer.from(encryptedData, "base64");
+function decryptData(base64Input) {
+  const key = crypto.createHash("sha256").update(SECRET_KEY).digest();
+  const iv = Buffer.from(SECRET_IV, "utf8").slice(0, 12);
 
-  const iv = bData.slice(0, 12); // fixed IV length
-  const tag = bData.slice(12, 28); // 16-byte tag
-  const text = bData.slice(28);
+  const combined = Buffer.from(base64Input, "base64");
 
-  const decipher = crypto.createDecipheriv(
-    "aes-256-gcm",
-    Buffer.from(SECRET_KEY),
-    iv
-  );
-  decipher.setAuthTag(tag);
+  // split encrypted data and authTag
+  const encrypted = combined.slice(0, combined.length - 16); // all but last 16 bytes
+  const authTag = combined.slice(combined.length - 16);
 
-  const decrypted = Buffer.concat([decipher.update(text), decipher.final()]);
-  return JSON.parse(decrypted.toString());
+  const decipher = crypto.createDecipheriv("aes-256-gcm", key, iv);
+  decipher.setAuthTag(authTag);
+
+  let decrypted = decipher.update(encrypted, null, "utf8");
+  decrypted += decipher.final("utf8");
+
+  return JSON.parse(decrypted);
 }
 
 module.exports = { encryptData, decryptData };
