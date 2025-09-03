@@ -83,12 +83,16 @@ const ORDER_GENERATE_URL = "https://apis.rameepay.io/order/generate";
 
 router.post("/ramee/deposit", async (req, res) => {
   try {
-    const { amount } = req.body;
+    const { amount, accountNo } = req.body;
 
     const orderData = {
       orderid: "ORD" + Date.now(),
       amount,
+      accountNo,
       currency: "INR",
+      redirect_url: "https://www.billiondollarfx.com/live-accounts",
+      callback_url:
+        "https://winprofx-backend.onrender.com/api/payment/rameePay/callback",
     };
 
     console.log("📝 Order Data:", orderData);
