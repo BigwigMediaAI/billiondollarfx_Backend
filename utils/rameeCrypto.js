@@ -1,5 +1,6 @@
 // utils/rameeCrypto.js
 const crypto = require("crypto");
+require("dotenv").config();
 
 const SECRET_KEY = process.env.RAMEEPAY_SECRET_KEY;
 const SECRET_IV = process.env.RAMEEPAY_SECRET_IV; // must be at least 12 bytes

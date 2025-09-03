@@ -7,6 +7,7 @@ const {
   handleRameeCallback,
 } = require("../controllers/paymentController");
 const { encryptData, decryptData } = require("../utils/rameeCrypto");
+require("dotenv").config();
 
 router.post("/callback", handlePaymentCallback);
 router.post("/rameePay/callback", handleRameeCallback);
