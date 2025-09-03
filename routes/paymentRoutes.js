@@ -134,7 +134,7 @@ router.post("/ramee/deposit", async (req, res) => {
 
     // Encrypt orderData
     const encryptedPayload = encryptAESGCM(
-      SECRET_KEY,
+      process.env.RAMEEPAY_SECRET_KEY,
       JSON.stringify(orderData)
     );
 
@@ -155,7 +155,7 @@ router.post("/ramee/deposit", async (req, res) => {
     let decryptedResponse = null;
     if (response.data.data) {
       decryptedResponse = decryptAESGCM(
-        "YAbTqNJhYEPX344QRHCfD2xsAXRaMNoM",
+        process.env.RAMEEPAY_SECRET_KEY,
         response.data.data
       );
     }
