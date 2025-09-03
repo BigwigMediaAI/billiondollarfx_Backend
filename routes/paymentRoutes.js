@@ -78,7 +78,7 @@ router.post("/deposit", async (req, res) => {
   }
 });
 
-const AGENT_CODE = process.env.RAMEEPAY_AGENT_CODE;
+const AGENT_CODE = "MjXxkEv3mpLtsQJD";
 const RAMEEPAY_API = "https://apis.rameepay.io/order/generate";
 
 router.post("/ramee/deposit", async (req, res) => {
