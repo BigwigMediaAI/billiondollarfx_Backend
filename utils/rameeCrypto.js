@@ -2,12 +2,12 @@
 const crypto = require("crypto");
 require("dotenv").config();
 
-const SECRET_KEY = process.env.RAMEEPAY_SECRET_KEY;
-const SECRET_IV = process.env.RAMEEPAY_SECRET_IV; // must be at least 12 bytes
+const SECRET_KEY = process.env.RAMEEPAY_SECRET_KEY; // must be 32 bytes
+const SECRET_IV = process.env.RAMEEPAY_SECRET_IV; // provided by Ramee (must be 12 or 16 bytes depending on config)
 
 // AES-256-GCM encryption
 function encryptData(data) {
-  const iv = crypto.randomBytes(12); // IV should be 12 bytes for GCM
+  const iv = Buffer.from(SECRET_IV, "utf8"); // use fixed IV from dashboard
   const cipher = crypto.createCipheriv(
     "aes-256-gcm",
     Buffer.from(SECRET_KEY),
@@ -27,8 +27,8 @@ function encryptData(data) {
 function decryptData(encryptedData) {
   const bData = Buffer.from(encryptedData, "base64");
 
-  const iv = bData.slice(0, 12);
-  const tag = bData.slice(12, 28);
+  const iv = bData.slice(0, 12); // fixed IV length
+  const tag = bData.slice(12, 28); // 16-byte tag
   const text = bData.slice(28);
 
   const decipher = crypto.createDecipheriv(
