@@ -78,59 +78,44 @@ router.post("/deposit", async (req, res) => {
   }
 });
 
-const RAMEE_AGENT_CODE = process.env.RAMEEPAY_AGENT_CODE;
-const ORDER_GENERATE_URL = "https://apis.rameepay.io/order/generate";
+const AGENT_CODE = process.env.RAMEEPAY_AGENT_CODE;
+const RAMEEPAY_API = "https://apis.rameepay.io/order/generate";
 
 router.post("/ramee/deposit", async (req, res) => {
   try {
-    const { amount } = req.body;
+    const orderData = req.body; // { orderid, amount, currency, redirect_url, callback_url, merchantid }
 
-    const orderData = {
-      orderid: "ORD" + Date.now(),
-      amount,
+    // Encrypt payload
+    const encryptedData = encryptData(orderData);
+
+    const body = {
+      reqData: encryptedData,
+      agentCode: AGENT_CODE,
     };
 
-    console.log("📝 Order Data:", orderData);
+    // Send to RameePay
+    const { data } = await axios.post(RAMEEPAY_API, body, {
+      headers: { "Content-Type": "application/json" },
+    });
 
-    const encryptedReq = encryptData(orderData);
-    console.log("🔐 Encrypted Request:", encryptedReq);
+    console.log("🔐 Raw Response:", data);
 
-    const response = await axios.post(
-      ORDER_GENERATE_URL,
-      { reqData: encryptedReq, agentCode: RAMEE_AGENT_CODE },
-      { headers: { "Content-Type": "application/json" } }
-    );
-
-    console.log("📩 Ramee Response:", response.data);
-
-    if (
-      !response.data ||
-      !response.data.data ||
-      (response.data.status !== true && response.data.status !== "true")
-    ) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid response from RameePay",
-        raw: response.data,
-      });
+    let decryptedResponse = {};
+    if (data.data) {
+      decryptedResponse = decryptData(data.data);
+      console.log("✅ Decrypted Response:", decryptedResponse);
     }
 
-    const decrypted = decryptData(response.data.data);
-    console.log("🔓 Decrypted Response:", decrypted);
-
-    return res.json({
-      success: true,
-      payUrl: decrypted.url,
-      orderid: decrypted.orderid,
-      merchantid: decrypted.merchantid,
+    res.json({
+      raw: data,
+      decrypted: decryptedResponse,
     });
-  } catch (error) {
-    console.error("❌ Deposit Error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Failed to create deposit order",
-      error: error.message,
-    });
+  } catch (err) {
+    console.error(
+      "❌ Order Generate Error:",
+      err.response?.data || err.message
+    );
+    res.status(500).json({ error: "Order generate failed" });
   }
 });
 

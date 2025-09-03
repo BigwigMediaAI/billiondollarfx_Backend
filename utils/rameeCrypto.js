@@ -7,41 +7,39 @@ const SECRET_IV = process.env.RAMEEPAY_SECRET_IV; // must be at least 12 bytes
 
 // AES-256-GCM encryption
 function encryptData(data) {
-  const jsonData = JSON.stringify(data);
+  const iv = crypto.randomBytes(12); // IV should be 12 bytes for GCM
+  const cipher = crypto.createCipheriv(
+    "aes-256-gcm",
+    Buffer.from(SECRET_KEY),
+    iv
+  );
 
-  const key = crypto.createHash("sha256").update(SECRET_KEY).digest(); // 32-byte key
-  const iv = Buffer.from(SECRET_IV, "utf8").slice(0, 12); // GCM needs 12 bytes
+  const encrypted = Buffer.concat([
+    cipher.update(JSON.stringify(data), "utf8"),
+    cipher.final(),
+  ]);
+  const tag = cipher.getAuthTag();
 
-  const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);
-
-  let encrypted = cipher.update(jsonData, "utf8");
-  encrypted = Buffer.concat([encrypted, cipher.final()]);
-
-  const authTag = cipher.getAuthTag();
-
-  // combine cipher text + authTag and return base64
-  const combined = Buffer.concat([encrypted, authTag]);
-  return combined.toString("base64");
+  return Buffer.concat([iv, tag, encrypted]).toString("base64");
 }
 
 // AES-256-GCM decryption
-function decryptData(base64Input) {
-  const key = crypto.createHash("sha256").update(SECRET_KEY).digest();
-  const iv = Buffer.from(SECRET_IV, "utf8").slice(0, 12);
+function decryptData(encryptedData) {
+  const bData = Buffer.from(encryptedData, "base64");
 
-  const combined = Buffer.from(base64Input, "base64");
+  const iv = bData.slice(0, 12);
+  const tag = bData.slice(12, 28);
+  const text = bData.slice(28);
 
-  // split encrypted data and authTag
-  const encrypted = combined.slice(0, combined.length - 16); // all but last 16 bytes
-  const authTag = combined.slice(combined.length - 16);
+  const decipher = crypto.createDecipheriv(
+    "aes-256-gcm",
+    Buffer.from(SECRET_KEY),
+    iv
+  );
+  decipher.setAuthTag(tag);
 
-  const decipher = crypto.createDecipheriv("aes-256-gcm", key, iv);
-  decipher.setAuthTag(authTag);
-
-  let decrypted = decipher.update(encrypted, null, "utf8");
-  decrypted += decipher.final("utf8");
-
-  return JSON.parse(decrypted);
+  const decrypted = Buffer.concat([decipher.update(text), decipher.final()]);
+  return JSON.parse(decrypted.toString());
 }
 
 module.exports = { encryptData, decryptData };
