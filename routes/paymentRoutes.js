@@ -83,7 +83,7 @@ const RAMEEPAY_API = "https://apis.rameepay.io/order/generate";
 
 router.post("/ramee/deposit", async (req, res) => {
   try {
-    const orderData = req.body; // { orderid, amount, currency, redirect_url, callback_url, merchantid }
+    const orderData = req.body;
 
     // Encrypt payload
     const encryptedData = encryptData(orderData);

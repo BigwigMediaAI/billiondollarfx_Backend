@@ -95,7 +95,6 @@ exports.handleRameeCallback = async (req, res) => {
     console.log("Decrypted Webhook:", txn);
 
     if (txn.status === "SUCCESS") {
-      // 2. Call MoneyPlant API to credit balance
       const accountno = txn.merchantid;
       const amount = txn.realAmount;
       const orderid = txn.orderid;

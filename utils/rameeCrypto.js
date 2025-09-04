@@ -2,7 +2,7 @@
 const crypto = require("crypto");
 require("dotenv").config();
 
-const IV = "0123456789abcABC"; // fixed 16-byte IV
+const IV = process.env.RAMEEPAY_SECRET_IV; // fixed 16-byte IV
 const KEY = process.env.RAMEEPAY_SECRET_KEY; // must be 32 bytes for aes-256-cbc
 
 // AES-256-CBC encryption
