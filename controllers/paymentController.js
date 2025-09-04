@@ -83,6 +83,18 @@ exports.handlePaymentCallback = async (req, res) => {
 
 // your schema with { orderid, accountNo, amount, status }
 
+async function fetchRate() {
+  try {
+    const res = await axios.get(
+      "https://api.frankfurter.app/latest?amount=1&from=INR&to=USD"
+    );
+    return res.data.rates.USD; // 1 INR = ? USD
+  } catch (err) {
+    console.error("Error fetching INR→USD rate:", err.message);
+    return 0.012; // fallback rate if API fails
+  }
+}
+
 exports.handleRameeCallback = async (req, res) => {
   try {
     const { data, agentCode } = req.body;
@@ -120,11 +132,17 @@ exports.handleRameeCallback = async (req, res) => {
       }
       await order.save();
 
+      // ✅ 4. Convert INR → USD
+      const usdRate = await fetchRate();
+      const amountUSD = (parseFloat(amount) * usdRate).toFixed(2);
+
+      console.log(`💱 Converted: ₹${amount} → $${amountUSD} (rate ${usdRate})`);
+
       // 4. Call MoneyPlant API
       try {
         const mpResponse = await axios.post(
           "https://api.moneyplantfx.com/WSMoneyplant.aspx?type=SNDPAddBalance",
-          { accountno, amount, orderid },
+          { accountno, amount: amountUSD, orderid },
           { headers: { "Content-Type": "application/json" } }
         );
 
