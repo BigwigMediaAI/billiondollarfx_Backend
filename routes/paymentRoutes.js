@@ -172,11 +172,13 @@ router.post("/ramee/withdrawal", async (req, res) => {
       reqData: encryptedData,
       agentCode: AGENT_CODE,
     };
+    console.log(encryptedData);
 
     // 🔹 Call RameePay Withdrawal API
     const { data } = await axios.post(RAMEEPAY_WITHDRAWAL_API, body, {
       headers: { "Content-Type": "application/json" },
     });
+    console.log(data);
 
     let decryptedResponse = {};
     if (data.data) {
