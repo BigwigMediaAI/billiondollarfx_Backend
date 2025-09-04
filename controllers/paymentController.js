@@ -1,6 +1,7 @@
 const axios = require("axios");
 const Transaction = require("../models/Transaction");
 const { decryptData } = require("../utils/rameeCrypto");
+const Order = require("../models/Order");
 
 exports.handlePaymentCallback = async (req, res) => {
   try {
@@ -80,25 +81,42 @@ exports.handlePaymentCallback = async (req, res) => {
   }
 };
 
+// your schema with { orderid, accountNo, amount, status }
+
 exports.handleRameeCallback = async (req, res) => {
   try {
     const { data, agentCode } = req.body;
+
     if (!data || !agentCode) {
       return res
         .status(400)
         .json({ success: false, message: "Invalid payload" });
     }
 
-    // 1. Decrypt Rameepay response
+    // 1. Decrypt RameePay response
     const txn = decryptData(data);
-
-    console.log("Decrypted Webhook:", txn);
+    console.log("🔓 Decrypted Webhook:", txn);
 
     if (txn.status === "SUCCESS") {
-      const accountno = txn.merchantid;
+      const orderid = txn.merchantid;
       const amount = txn.realAmount;
-      const orderid = txn.orderid;
 
+      // 2. Find order mapping from DB
+      const order = await Order.findOne({ orderid });
+      if (!order) {
+        console.error("❌ Order not found in DB:", orderid);
+        return res
+          .status(404)
+          .json({ success: false, message: "Order not found" });
+      }
+
+      const accountno = order.accountNo;
+
+      // 3. Update status in DB
+      order.status = "SUCCESS";
+      await order.save();
+
+      // 4. Call MoneyPlant API
       try {
         const mpResponse = await axios.post(
           "https://api.moneyplantfx.com/WSMoneyplant.aspx?type=SNDPAddBalance",
@@ -106,16 +124,16 @@ exports.handleRameeCallback = async (req, res) => {
           { headers: { "Content-Type": "application/json" } }
         );
 
-        console.log("MoneyPlant Response:", mpResponse.data);
+        console.log("💰 MoneyPlant Response:", mpResponse.data);
       } catch (err) {
-        console.error("MoneyPlant Error:", err.message);
+        console.error("❌ MoneyPlant Error:", err.message);
       }
     }
 
-    // 3. Acknowledge webhook
+    // 5. Acknowledge webhook
     return res.status(200).json({ success: true });
   } catch (error) {
-    console.error("Callback Error:", error);
+    console.error("❌ Callback Error:", error);
     return res.status(500).json({ success: false, error: error.message });
   }
 };

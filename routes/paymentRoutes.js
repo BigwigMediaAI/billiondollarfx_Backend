@@ -87,7 +87,7 @@ router.post("/ramee/deposit", async (req, res) => {
 
     // Encrypt payload
     const encryptedData = encryptData(orderData);
-    console.log(encryptedData);
+    // console.log(encryptedData);
 
     const body = {
       reqData: encryptedData,
@@ -99,7 +99,7 @@ router.post("/ramee/deposit", async (req, res) => {
       headers: { "Content-Type": "application/json" },
     });
 
-    console.log("🔐 Raw Response:", data);
+    // console.log("🔐 Raw Response:", data);
 
     let decryptedResponse = {};
     if (data.data) {
