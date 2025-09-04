@@ -182,10 +182,11 @@ router.post("/ramee/withdrawal", async (req, res) => {
     console.log(data);
 
     let decryptedResponse = {};
+    console.log(data.data);
     if (data.data) {
       decryptedResponse = decryptData(data.data);
-      console.log("✅ Decrypted Withdrawal Response:", decryptedResponse);
     }
+    console.log("✅ Decrypted Withdrawal Response:", decryptedResponse);
 
     // 🔹 If withdrawal succeeded → call MoneyPlant
     if (decryptedResponse.success) {
