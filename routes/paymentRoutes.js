@@ -9,6 +9,7 @@ const {
 const { encryptData, decryptData } = require("../utils/rameeCrypto");
 require("dotenv").config();
 const Order = require("../models/Order");
+const Withdrawal = require("../models/withdrawal");
 
 router.post("/callback", handlePaymentCallback);
 router.post("/rameePay/callback", handleRameeCallback);
