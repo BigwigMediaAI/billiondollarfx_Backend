@@ -138,6 +138,18 @@ router.post("/ramee/deposit", async (req, res) => {
   }
 });
 
+async function fetchRate() {
+  try {
+    const res = await axios.get(
+      "https://api.frankfurter.app/latest?amount=1&from=INR&to=USD"
+    );
+    return res.data.rates.USD; // 1 INR = ? USD
+  } catch (err) {
+    console.error("Error fetching INR→USD rate:", err.message);
+    return 0.012; // fallback rate if API fails
+  }
+}
+
 router.post("/ramee/withdrawal", async (req, res) => {
   try {
     const { account, ifsc, name, mobile, amount, note, accountNo } = req.body;
@@ -188,6 +200,9 @@ router.post("/ramee/withdrawal", async (req, res) => {
     }
     console.log("✅ Decrypted Withdrawal Response:", decryptedResponse);
 
+    const usdRate = await fetchRate();
+    const amountUSD = (parseFloat(amount) * usdRate).toFixed(2);
+
     // 🔹 If withdrawal succeeded → call MoneyPlant
     if (decryptedResponse.success) {
       try {
@@ -195,7 +210,7 @@ router.post("/ramee/withdrawal", async (req, res) => {
           "https://api.moneyplantfx.com/WSMoneyplant.aspx?type=SNDPAddBalance",
           {
             accountno: accountNo,
-            amount: -Math.abs(amount), // negative for withdrawal
+            amount: -Math.abs(amountUSD), // negative for withdrawal
             orderid,
           },
           { headers: { "Content-Type": "application/json" } }
