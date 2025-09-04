@@ -7,7 +7,6 @@ const cors = require("cors");
 const moneyplantRoutes = require("./routes/moneyplant.routes");
 const ticketRoutes = require("./routes/ticketRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
-const orderRoutes = require("./routes/order.route");
 
 require("dotenv").config();
 connect();
@@ -21,7 +20,6 @@ app.use("/api/brokers", brokerRoutes);
 app.use("/api/moneyplant", moneyplantRoutes);
 app.use("/api/tickets", ticketRoutes);
 app.use("/api/payment", paymentRoutes);
-app.use("/order", orderRoutes);
 
 app.use("/", (req, res) => {
   res.send("I ..I...AM ...IRONMAN🫰");

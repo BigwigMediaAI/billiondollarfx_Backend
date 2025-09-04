@@ -8,6 +8,7 @@ const {
 } = require("../controllers/paymentController");
 const { encryptData, decryptData } = require("../utils/rameeCrypto");
 require("dotenv").config();
+const Order = require("../models/Order");
 
 router.post("/callback", handlePaymentCallback);
 router.post("/rameePay/callback", handleRameeCallback);
@@ -83,40 +84,55 @@ const RAMEEPAY_API = "https://apis.rameepay.io/order/generate";
 
 router.post("/ramee/deposit", async (req, res) => {
   try {
-    const orderData = req.body;
+    const { accountNo, amount } = req.body;
+
+    if (!accountNo || !amount) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Missing fields" });
+    }
+
+    // 1️⃣ Generate unique orderid
+    const orderid = "ORD" + Date.now();
+
+    // 2️⃣ Save in DB (map orderid → accountNo & amount)
+    const newOrder = new Order({ orderid, accountNo, amount });
+    await newOrder.save();
+
+    // 3️⃣ Prepare payload for RameePay (only orderid & amount required)
+    const orderData = { orderid, amount };
 
     // Encrypt payload
     const encryptedData = encryptData(orderData);
-    // console.log(encryptedData);
 
     const body = {
       reqData: encryptedData,
       agentCode: AGENT_CODE,
     };
 
-    // Send to RameePay
+    // 4️⃣ Send to RameePay
     const { data } = await axios.post(RAMEEPAY_API, body, {
       headers: { "Content-Type": "application/json" },
     });
 
-    // console.log("🔐 Raw Response:", data);
-
+    // Decrypt response if exists
     let decryptedResponse = {};
     if (data.data) {
       decryptedResponse = decryptData(data.data);
       console.log("✅ Decrypted Response:", decryptedResponse);
     }
 
+    // 5️⃣ Return response to frontend
     res.json({
+      success: true,
+      message: "Order created & sent to RameePay",
+      order: newOrder,
       raw: data,
       decrypted: decryptedResponse,
     });
   } catch (err) {
-    console.error(
-      "❌ Order Generate Error:",
-      err.response?.data || err.message
-    );
-    res.status(500).json({ error: "Order generate failed" });
+    console.error("❌ Deposit Error:", err.response?.data || err.message);
+    res.status(500).json({ success: false, error: "Deposit failed" });
   }
 });
 

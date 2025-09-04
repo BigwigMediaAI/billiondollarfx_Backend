@@ -113,7 +113,11 @@ exports.handleRameeCallback = async (req, res) => {
       const accountno = order.accountNo;
 
       // 3. Update status in DB
-      order.status = "SUCCESS";
+      if (txn.status === "SUCCESS") {
+        order.status = "SUCCESS";
+      } else if (txn.status === "FAILED") {
+        order.status = "FAILED";
+      }
       await order.save();
 
       // 4. Call MoneyPlant API
