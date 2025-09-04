@@ -2,46 +2,34 @@
 const crypto = require("crypto");
 require("dotenv").config();
 
-const SECRET_KEY = process.env.RAMEEPAY_SECRET_KEY;
-const SECRET_IV = process.env.RAMEEPAY_SECRET_IV; // must be at least 12 bytes
+const IV = "0123456789abcABC"; // fixed 16-byte IV
+const KEY = process.env.RAMEEPAY_SECRET_KEY; // must be 32 bytes for aes-256-cbc
 
-// AES-256-GCM encryption
+// AES-256-CBC encryption
 function encryptData(data) {
-  const jsonData = JSON.stringify(data);
-
-  const key = crypto.createHash("sha256").update(SECRET_KEY).digest(); // 32-byte key
-  const iv = Buffer.from(SECRET_IV, "utf8").slice(0, 12); // GCM needs 12 bytes
-
-  const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);
-
-  let encrypted = cipher.update(jsonData, "utf8");
-  encrypted = Buffer.concat([encrypted, cipher.final()]);
-
-  const authTag = cipher.getAuthTag();
-
-  // combine cipher text + authTag and return base64
-  const combined = Buffer.concat([encrypted, authTag]);
-  return combined.toString("base64");
+  try {
+    const text = JSON.stringify(data);
+    const cipher = crypto.createCipheriv("aes-256-cbc", KEY, IV);
+    let encrypted = cipher.update(text, "utf8", "base64");
+    encrypted += cipher.final("base64");
+    return encrypted;
+  } catch (error) {
+    console.error("Encryption Error:", error.message);
+    return false;
+  }
 }
 
-// AES-256-GCM decryption
-function decryptData(base64Input) {
-  const key = crypto.createHash("sha256").update(SECRET_KEY).digest();
-  const iv = Buffer.from(SECRET_IV, "utf8").slice(0, 12);
-
-  const combined = Buffer.from(base64Input, "base64");
-
-  // split encrypted data and authTag
-  const encrypted = combined.slice(0, combined.length - 16); // all but last 16 bytes
-  const authTag = combined.slice(combined.length - 16);
-
-  const decipher = crypto.createDecipheriv("aes-256-gcm", key, iv);
-  decipher.setAuthTag(authTag);
-
-  let decrypted = decipher.update(encrypted, null, "utf8");
-  decrypted += decipher.final("utf8");
-
-  return JSON.parse(decrypted);
+// AES-256-CBC decryption
+function decryptData(encryptedText) {
+  try {
+    const decipher = crypto.createDecipheriv("aes-256-cbc", KEY, IV);
+    let decrypted = decipher.update(encryptedText, "base64", "utf8");
+    decrypted += decipher.final("utf8");
+    return JSON.parse(decrypted);
+  } catch (error) {
+    console.error("Decryption Error:", error.message);
+    return false;
+  }
 }
 
 module.exports = { encryptData, decryptData };

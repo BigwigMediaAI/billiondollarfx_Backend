@@ -87,7 +87,7 @@ router.post("/ramee/deposit", async (req, res) => {
 
     // Encrypt payload
     const encryptedData = encryptData(orderData);
-    console.log(encryptData);
+    console.log(encryptedData);
 
     const body = {
       reqData: encryptedData,
