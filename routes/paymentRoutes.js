@@ -81,6 +81,7 @@ router.post("/deposit", async (req, res) => {
 
 const AGENT_CODE = process.env.RAMEEPAY_AGENT_CODE;
 const RAMEEPAY_API = "https://apis.rameepay.io/order/generate";
+const RAMEEPAY_WITHDRAWAL_API = "https://apis.rameepay.io/withdrawal/account";
 
 router.post("/ramee/deposit", async (req, res) => {
   try {
@@ -133,6 +134,93 @@ router.post("/ramee/deposit", async (req, res) => {
   } catch (err) {
     console.error("❌ Deposit Error:", err.response?.data || err.message);
     res.status(500).json({ success: false, error: "Deposit failed" });
+  }
+});
+
+router.post("/ramee/withdrawal", async (req, res) => {
+  try {
+    const { account, ifsc, name, mobile, amount, note, accountNo } = req.body;
+
+    if (!account || !ifsc || !name || !mobile || !amount || !accountNo) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Missing required fields" });
+    }
+
+    // Generate unique order ID
+    const orderid = `WDR${Date.now()}`;
+
+    // Save request in DB
+    const withdrawalRecord = new Withdrawal({
+      orderid,
+      account,
+      ifsc,
+      name,
+      mobile,
+      amount,
+      note,
+      accountNo,
+      status: false,
+    });
+    await withdrawalRecord.save();
+
+    // 🔹 Prepare payload for RameePay
+    const payload = { account, ifsc, name, mobile, amount, note, orderid };
+    const encryptedData = encryptData(payload);
+
+    const body = {
+      reqData: encryptedData,
+      agentCode: AGENT_CODE,
+    };
+
+    // 🔹 Call RameePay Withdrawal API
+    const { data } = await axios.post(RAMEEPAY_WITHDRAWAL_API, body, {
+      headers: { "Content-Type": "application/json" },
+    });
+
+    let decryptedResponse = {};
+    if (data.data) {
+      decryptedResponse = decryptData(data.data);
+      console.log("✅ Decrypted Withdrawal Response:", decryptedResponse);
+    }
+
+    // 🔹 If withdrawal succeeded → call MoneyPlant
+    if (decryptedResponse.success) {
+      try {
+        const mpResponse = await axios.post(
+          "https://api.moneyplantfx.com/WSMoneyplant.aspx?type=SNDPAddBalance",
+          {
+            accountno: accountNo,
+            amount: -Math.abs(amount), // negative for withdrawal
+            orderid,
+          },
+          { headers: { "Content-Type": "application/json" } }
+        );
+
+        console.log("💰 MoneyPlant Response:", mpResponse.data);
+
+        await Withdrawal.findOneAndUpdate(
+          { orderid },
+          { status: true, response: decryptedResponse }
+        );
+      } catch (err) {
+        console.error("❌ MoneyPlant Error:", err.message);
+      }
+    } else {
+      await Withdrawal.findOneAndUpdate(
+        { orderid },
+        { status: false, response: decryptedResponse }
+      );
+    }
+
+    res.json({
+      success: true,
+      raw: data,
+      decrypted: decryptedResponse,
+    });
+  } catch (err) {
+    console.error("❌ Withdrawal Error:", err.response?.data || err.message);
+    res.status(500).json({ success: false, error: "Withdrawal failed" });
   }
 });
 
