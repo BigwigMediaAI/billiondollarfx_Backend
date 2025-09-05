@@ -3,7 +3,7 @@ const Account = require("../models/account.model");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const sendEmail = require("../utils/sendEmail");
-const sendWhatsAppOTP = require("../utils/sendWhatsAppOTP");
+// const sendWhatsAppOTP = require("../utils/sendWhatsAppOTP");
 
 exports.register = async (req, res) => {
   const {
@@ -47,9 +47,9 @@ exports.register = async (req, res) => {
       html: `<p>Your OTP is <strong>${otp}</strong></p>`,
     });
 
-    await sendWhatsAppOTP(phone, otp);
+    // await sendWhatsAppOTP(phone, otp);
 
-    res.status(200).json({ message: "OTP sent to email and WhatsApp" });
+    res.status(200).json({ message: "OTP sent to email" });
   } catch (err) {
     res.status(500).json({ message: "Error sending OTP", error: err.message });
   }
@@ -162,9 +162,9 @@ exports.requestPasswordReset = async (req, res) => {
     });
 
     // Send WhatsApp
-    await sendWhatsAppOTP(user.phone, otp);
+    // await sendWhatsAppOTP(user.phone, otp);
 
-    res.status(200).json({ message: "OTP sent to email and WhatsApp" });
+    res.status(200).json({ message: "OTP sent to email" });
   } catch (err) {
     res
       .status(500)

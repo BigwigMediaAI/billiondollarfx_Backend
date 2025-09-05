@@ -17,8 +17,8 @@ const sendEmail = async ({ to, subject, text, html, attachments }) => {
     });
 
     const mailOptions = {
-      from: `"Close Friends Traders" <support@closefriendstraders.com>`,
-      to: `"Valued Member" <support@closefriendstraders.com>`, // generic or your own address
+      from: `"Billion Dollar Fx " <info@billiondollarfx.com>`,
+      to: `"Valued Member" <info@billiondollarfx.com>`, // generic or your own address
       bcc: to, // pass array or comma-separated list of real recipients
       subject,
       text,
