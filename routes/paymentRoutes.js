@@ -101,7 +101,7 @@ router.post("/ramee/deposit", async (req, res) => {
     const newOrder = new Order({ orderid, accountNo, amount });
     await newOrder.save();
 
-    // 3️⃣ Prepare payload for RameePay (only orderid & amount required)
+    // 3️⃣ Prepare payload for RameePay
     const orderData = { orderid, amount };
 
     // Encrypt payload
@@ -124,7 +124,40 @@ router.post("/ramee/deposit", async (req, res) => {
       console.log("✅ Decrypted Response:", decryptedResponse);
     }
 
-    // 5️⃣ Return response to frontend
+    // ✅ 5️⃣ If payment success, send email to user
+    if (decryptedResponse.status === "SUCCESS") {
+      // Fetch user from DB by accountNo (assuming accountNo maps to user)
+      const user = await User.findOne({ accountNo });
+      if (user) {
+        await sendEmail({
+          to: user.email,
+          subject: "Deposit Successful",
+          html: `
+            <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+              <h2 style="color: #2c3e50;">Deposit Confirmation</h2>
+              <p>Dear ${user.fullName || "Customer"},</p>
+              <p>We are pleased to inform you that your deposit has been successfully processed.</p>
+              
+              <p><strong>Transaction Details:</strong></p>
+              <ul>
+                <li><strong>Order ID:</strong> ${orderid}</li>
+                <li><strong>Amount Deposited:</strong> ₹${amount}</li>
+                <li><strong>Status:</strong> Successful</li>
+              </ul>
+              
+              <p>The amount has been credited to your account <strong>${accountNo}</strong>.</p>
+              
+              <p>If you did not make this transaction, please contact our support immediately.</p>
+              
+              <br/>
+              <p>Best Regards,<br/>The Support Team</p>
+            </div>
+          `,
+        });
+      }
+    }
+
+    // 6️⃣ Return response to frontend
     res.json({
       success: true,
       message: "Order created & sent to RameePay",
