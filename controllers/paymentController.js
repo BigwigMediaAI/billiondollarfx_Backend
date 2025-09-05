@@ -2,6 +2,7 @@ const axios = require("axios");
 const Transaction = require("../models/Transaction");
 const { decryptData } = require("../utils/rameeCrypto");
 const Order = require("../models/Order");
+const User = require("../models/User");
 
 exports.handlePaymentCallback = async (req, res) => {
   try {
@@ -138,7 +139,7 @@ exports.handleRameeCallback = async (req, res) => {
 
       console.log(`💱 Converted: ₹${amount} → $${amountUSD} (rate ${usdRate})`);
 
-      // 4. Call MoneyPlant API
+      // 5. Call MoneyPlant API
       try {
         const mpResponse = await axios.post(
           "https://api.moneyplantfx.com/WSMoneyplant.aspx?type=SNDPAddBalance",
@@ -147,12 +148,43 @@ exports.handleRameeCallback = async (req, res) => {
         );
 
         console.log("💰 MoneyPlant Response:", mpResponse.data);
+
+        // ✅ 6. Send confirmation email to user
+        const user = await User.findOne({ accountNo: accountno });
+        if (user) {
+          await sendEmail({
+            to: user.email,
+            subject: "Deposit Successful - Balance Updated",
+            html: `
+              <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                <h2 style="color: #2c3e50;">Deposit Confirmation</h2>
+                <p>Dear ${user.fullName || "Customer"},</p>
+                <p>Your deposit has been successfully processed and your trading balance has been updated.</p>
+                
+                <p><strong>Transaction Details:</strong></p>
+                <ul>
+                  <li><strong>Order ID:</strong> ${orderid}</li>
+                  <li><strong>Amount Deposited:</strong> ₹${amount} (≈ $${amountUSD})</li>
+                  <li><strong>Status:</strong> Successful</li>
+                  <li><strong>Date:</strong> ${new Date().toLocaleString()}</li>
+                </ul>
+                
+                <p>The amount has been credited to your trading account <strong>${accountno}</strong>.</p>
+                
+                <p>If you did not initiate this transaction, please contact our support team immediately.</p>
+                
+                <br/>
+                <p>Best Regards,<br/>The Support Team</p>
+              </div>
+            `,
+          });
+        }
       } catch (err) {
         console.error("❌ MoneyPlant Error:", err.message);
       }
     }
 
-    // 5. Acknowledge webhook
+    // 7. Acknowledge webhook
     return res.status(200).json({ success: true });
   } catch (error) {
     console.error("❌ Callback Error:", error);
