@@ -43,8 +43,25 @@ exports.register = async (req, res) => {
 
     await sendEmail({
       to: email,
-      subject: "Your OTP Code",
-      html: `<p>Your OTP is <strong>${otp}</strong></p>`,
+      subject: "Verify Your Email Address - OTP Code",
+      html: `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+      <h2 style="color: #2c3e50;">Email Verification Required</h2>
+      <p>Dear ${fullName || "User"},</p>
+      <p>Thank you for registering with us. To complete your sign-up, please use the One-Time Password (OTP) below to verify your email address:</p>
+      
+      <p style="font-size: 20px; font-weight: bold; color: #2c3e50; text-align: center; margin: 20px 0;">
+        ${otp}
+      </p>
+      
+      <p>This OTP is valid for <strong>5 minutes</strong>. Please do not share this code with anyone for security reasons.</p>
+      
+      <p>If you did not initiate this request, you can safely ignore this email.</p>
+      
+      <br/>
+      <p>Best Regards,<br/>The Support Team</p>
+    </div>
+  `,
     });
 
     // await sendWhatsAppOTP(phone, otp);
@@ -154,11 +171,27 @@ exports.requestPasswordReset = async (req, res) => {
     user.resetOtpExpires = otpExpires;
     await user.save();
 
-    // Send Email
     await sendEmail({
       to: email,
-      subject: "Password Reset OTP",
-      html: `<p>Your OTP to reset your password is <strong>${otp}</strong></p>`,
+      subject: "Password Reset Request - OTP Code",
+      html: `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+      <h2 style="color: #2c3e50;">Password Reset Verification</h2>
+      <p>Dear ${user.fullName || "User"},</p>
+      <p>We received a request to reset the password for your account. To proceed, please use the One-Time Password (OTP) provided below:</p>
+      
+      <p style="font-size: 20px; font-weight: bold; color: #2c3e50; text-align: center; margin: 20px 0;">
+        ${otp}
+      </p>
+      
+      <p>This OTP is valid for <strong>5 minutes</strong>. Do not share this code with anyone for security purposes.</p>
+      
+      <p>If you did not request a password reset, please ignore this email. Your account remains secure.</p>
+      
+      <br/>
+      <p>Best Regards,<br/>The Support Team</p>
+    </div>
+  `,
     });
 
     // Send WhatsApp
