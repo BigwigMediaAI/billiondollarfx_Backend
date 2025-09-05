@@ -6,6 +6,7 @@ const {
   getAllIBRequests,
   approveIBByEmail,
   rejectIBByEmail,
+  referralCode,
 } = require("../controllers/ibController");
 
 // User side
@@ -15,5 +16,6 @@ router.post("/register", registerIB);
 router.get("/", getAllIBRequests);
 router.put("/:email/approve", approveIBByEmail);
 router.put("/:email/reject", rejectIBByEmail);
+router.get("/:email", referralCode);
 
 module.exports = router;

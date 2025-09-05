@@ -114,9 +114,29 @@ const rejectIBByEmail = async (req, res) => {
   }
 };
 
+const referralCode = async (req, res) => {
+  try {
+    const { email } = req.params;
+
+    // find user by email
+    const ib = await IB.findOne({ email });
+
+    if (!ib) {
+      return res.status(404).json({ message: "IB not found" });
+    }
+
+    // assuming your schema has `referralCode` field
+    return res.json({ referralCode: ib.referralCode });
+  } catch (err) {
+    console.error("❌ Error fetching referral code:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 module.exports = {
   registerIB,
   getAllIBRequests,
   approveIBByEmail,
   rejectIBByEmail,
+  referralCode,
 };
