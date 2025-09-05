@@ -21,7 +21,7 @@ app.use("/api/brokers", brokerRoutes);
 app.use("/api/moneyplant", moneyplantRoutes);
 app.use("/api/tickets", ticketRoutes);
 app.use("/api/payment", paymentRoutes);
-app.use("/api/IB", IBRoutes);
+app.use("/api/ib", IBRoutes);
 
 app.use("/", (req, res) => {
   res.send("I ..I...AM ...IRONMAN🫰");

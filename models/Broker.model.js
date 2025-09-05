@@ -1,41 +1,22 @@
 const mongoose = require("mongoose");
 
-const brokerSchema = new mongoose.Schema(
+const ibSchema = new mongoose.Schema(
   {
-    email: { type: String, required: true, unique: true },
+    // user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    email: { type: String, required: true },
 
     // Onboarding Questions
-    existingClientBase: {
-      type: String,
-      enum: ["Yes", "No"],
-      required: true,
-    },
-    offerEducation: {
-      type: String,
-      enum: ["Yes", "No"],
-      required: true,
-    },
+    existingClientBase: { type: String, enum: ["Yes", "No"], required: true },
+    offerEducation: { type: String, enum: ["Yes", "No"], required: true },
     expectedClientsNext3Months: {
       type: String,
-      enum: ["0-10", "10-50", "50-100", "100+"], // customize options as per frontend
+      enum: ["0-10", "10-50", "50-100", "100+"],
       required: true,
     },
-    expectedCommissionDirect: {
-      type: String,
-      required: true, // e.g. "5 USD per lot" or dropdown value
-    },
-    expectedCommissionSubIB: {
-      type: String,
-      required: true,
-    },
-    yourShare: {
-      type: Number,
-      default: 0,
-    },
-    clientShare: {
-      type: String, // auto-adjusted from backend logic if needed
-      default: "auto-adjusted",
-    },
+    expectedCommissionDirect: { type: String, required: true },
+    expectedCommissionSubIB: { type: String, required: true },
+    yourShare: { type: Number, default: 0 },
+    clientShare: { type: Number, default: 0 },
 
     // Approval Flow
     status: {
@@ -43,9 +24,9 @@ const brokerSchema = new mongoose.Schema(
       enum: ["pending", "approved", "rejected"],
       default: "pending",
     },
-    referralKey: { type: String, default: null },
+    referralCode: { type: String, unique: true, sparse: true },
   },
   { timestamps: true }
 );
 
-module.exports = mongoose.model("IB", brokerSchema);
+module.exports = mongoose.model("IB", ibSchema);

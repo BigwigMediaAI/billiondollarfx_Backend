@@ -1,16 +1,19 @@
-// routes/brokerRoutes.js
+// routes/ibRoutes.js
 const express = require("express");
 const router = express.Router();
-const brokerController = require("../controllers/IB-Controller");
+const {
+  registerIB,
+  getAllIBRequests,
+  approveIBByEmail,
+  rejectIBByEmail,
+} = require("../controllers/ibController");
 
-// Broker registers
-router.post("/register", brokerController.registerBroker);
+// User side
+router.post("/register", registerIB);
 
-// Admin actions
-router.put("/approve/:email", brokerController.approveBroker);
-router.put("/reject/:email", brokerController.rejectBroker);
-
-// Admin fetch all brokers
-router.get("/", brokerController.getAllBrokers);
+// Admin side
+router.get("/", getAllIBRequests);
+router.put("/:email/approve", approveIBByEmail);
+router.put("/:email/reject", rejectIBByEmail);
 
 module.exports = router;
