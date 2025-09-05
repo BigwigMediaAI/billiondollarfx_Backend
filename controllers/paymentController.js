@@ -3,6 +3,7 @@ const Transaction = require("../models/Transaction");
 const { decryptData } = require("../utils/rameeCrypto");
 const Order = require("../models/Order");
 const User = require("../models/User");
+const sendEmail = require("../utils/sendEmail");
 
 exports.handlePaymentCallback = async (req, res) => {
   try {

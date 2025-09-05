@@ -11,6 +11,7 @@ require("dotenv").config();
 const Order = require("../models/Order");
 const Withdrawal = require("../models/withdrawal");
 const User = require("../models/User");
+const sendEmail = require("../utils/sendEmail");
 
 router.post("/callback", handlePaymentCallback);
 router.post("/rameePay/callback", handleRameeCallback);
