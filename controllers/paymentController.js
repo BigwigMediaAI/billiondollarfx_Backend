@@ -151,6 +151,7 @@ exports.handleRameeCallback = async (req, res) => {
 
         // ✅ 6. Send confirmation email to user
         const user = await User.findOne({ accountNo: accountno });
+        console.log(user);
         if (user) {
           await sendEmail({
             to: user.email,

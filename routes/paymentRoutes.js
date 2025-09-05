@@ -226,6 +226,7 @@ router.post("/ramee/withdrawal", async (req, res) => {
         // ✅ 6. Send confirmation email to user
         // ✅ After MoneyPlant success
         const user = await User.findOne({ accountNo: accountNo });
+        console.log(user);
         if (user) {
           await sendEmail({
             to: user.email,
