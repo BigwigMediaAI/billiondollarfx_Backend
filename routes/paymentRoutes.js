@@ -10,6 +10,7 @@ const { encryptData, decryptData } = require("../utils/rameeCrypto");
 require("dotenv").config();
 const Order = require("../models/Order");
 const Withdrawal = require("../models/withdrawal");
+const User = require("../models/User");
 
 router.post("/callback", handlePaymentCallback);
 router.post("/rameePay/callback", handleRameeCallback);
@@ -222,6 +223,42 @@ router.post("/ramee/withdrawal", async (req, res) => {
           { orderid },
           { status: true, response: decryptedResponse }
         );
+        // ✅ 6. Send confirmation email to user
+        // ✅ After MoneyPlant success
+        const user = await User.findOne({ accountNo: accountNo });
+        if (user) {
+          await sendEmail({
+            to: user.email,
+            subject: "Withdrawal Successful - Funds Deducted",
+            html: `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <h2 style="color: #2c3e50;">Withdrawal Confirmation</h2>
+        <p>Dear ${user.fullName || "Customer"},</p>
+        
+        <p>Your withdrawal request has been <strong>successfully processed</strong> and the amount has been deducted from your trading balance.</p>
+        
+        <p><strong>Transaction Details:</strong></p>
+        <ul>
+          <li><strong>Order ID:</strong> ${orderid}</li>
+          <li><strong>Amount Withdrawn:</strong> ₹${amount} (≈ $${amountUSD})</li>
+          <li><strong>Bank Account:</strong> ${account}</li>
+          <li><strong>IFSC Code:</strong> ${ifsc}</li>
+          <li><strong>Beneficiary Name:</strong> ${name}</li>
+          <li><strong>Note:</strong> ${note || "N/A"}</li>
+          <li><strong>Status:</strong> ✅ Successful</li>
+          <li><strong>Date & Time:</strong> ${new Date().toLocaleString()}</li>
+        </ul>
+
+        <p>The amount has been transferred to your registered bank account <strong>${accountNo}</strong>.</p>
+
+        <p>If you did not initiate this transaction, please contact our support team immediately.</p>
+        
+        <br/>
+        <p>Best Regards,<br/>The Support Team</p>
+      </div>
+    `,
+          });
+        }
       } catch (err) {
         console.error("❌ MoneyPlant Error:", err.message);
       }
