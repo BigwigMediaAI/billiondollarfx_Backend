@@ -98,3 +98,23 @@ exports.getAllBrokers = async (req, res) => {
       .json({ message: "Failed to fetch brokers", error: error.message });
   }
 };
+
+exports.toggleBrokerMarked = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const broker = await Broker.findById(id);
+    if (!broker) {
+      return res.status(404).json({ message: "Broker not found" });
+    }
+
+    broker.marked = !broker.marked; // toggle true/false
+    await broker.save();
+
+    res.json({ success: true, marked: broker.marked });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Error updating broker", error: error.message });
+  }
+};
