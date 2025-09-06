@@ -41,6 +41,10 @@ const brokerSchema = new mongoose.Schema(
       default: () => new Date(Date.now() + 10 * 60 * 1000), // 10 minutes from now
       index: { expires: 0 }, // TTL index -> deletes doc when expiresAt is reached
     },
+    marked: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );
