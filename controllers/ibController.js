@@ -1,6 +1,7 @@
 // controllers/ibController.js
 const IB = require("../models/Broker.model");
 const User = require("../models/User");
+const sendEmail = require("../utils/sendEmail");
 
 /**
  * 📌 Register IB Request (User Side)
@@ -85,8 +86,34 @@ const approveIBByEmail = async (req, res) => {
     await ib.save();
 
     // update user
-    await User.findOneAndUpdate({ email }, { isApprovedIB: true });
+    const user = await User.findOneAndUpdate({ email }, { isApprovedIB: true });
+    // 🔹 Send approval email
+    await sendEmail({
+      to: user.email,
+      subject: "Your Introducing Broker Application Approved",
+      html: `
+        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+          <h2 style="color: #2c3e50;">Congratulations ${
+            user.fullName || "Broker"
+          }!</h2>
+          <p>Your application as an Introducing Broker has been <strong style="color:green;">approved</strong>.</p>
+          
+          <p><strong>Details:</strong></p>
+          <ul>
+            <li><strong>Email:</strong> ${user.email}</li>
+            <li><strong>Referral Key:</strong> ${broker.referralKey}</li>
+            <li><strong>Status:</strong> Approved</li>
+            <li><strong>Date:</strong> ${new Date().toLocaleString()}</li>
+          </ul>
 
+          <p>You can now start referring clients using your referral key.</p>
+          
+          <p>If you have any questions, feel free to contact our support team.</p>
+          <br/>
+          <p>Best Regards,<br/>The Support Team</p>
+        </div>
+      `,
+    });
     res.json({ message: "IB approved successfully", referralCode });
   } catch (err) {
     console.error("❌ Error approving IB:", err);
@@ -106,7 +133,31 @@ const rejectIBByEmail = async (req, res) => {
 
     ib.status = "rejected";
     await ib.save();
+    const user = User.findOne({ email });
+    // 🔹 Send rejection email
+    await sendEmail({
+      to: user.email,
+      subject: "Your Introducing Broker Application Rejected",
+      html: `
+        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+          <h2 style="color: #c0392b;">Application Update</h2>
+          <p>Dear ${user.fullName || "Broker"},</p>
+          <p>We regret to inform you that your application as an Introducing Broker has been <strong style="color:red;">rejected</strong> at this time.</p>
+          
+          <p><strong>Details:</strong></p>
+          <ul>
+            <li><strong>Email:</strong> ${user.email}</li>
+            <li><strong>Status:</strong> Rejected</li>
+            <li><strong>Date:</strong> ${new Date().toLocaleString()}</li>
+          </ul>
 
+          <p>If you believe this was a mistake or would like to reapply, please contact our support team for further guidance.</p>
+          
+          <br/>
+          <p>Best Regards,<br/>The Support Team</p>
+        </div>
+      `,
+    });
     res.json({ message: "IB rejected successfully" });
   } catch (err) {
     console.error("❌ Error rejecting IB:", err);
