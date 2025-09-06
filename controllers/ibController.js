@@ -101,7 +101,7 @@ const approveIBByEmail = async (req, res) => {
           <p><strong>Details:</strong></p>
           <ul>
             <li><strong>Email:</strong> ${user.email}</li>
-            <li><strong>Referral Key:</strong> ${broker.referralKey}</li>
+            <li><strong>Referral Key:</strong> ${ib.referralCode}</li>
             <li><strong>Status:</strong> Approved</li>
             <li><strong>Date:</strong> ${new Date().toLocaleString()}</li>
           </ul>
@@ -133,8 +133,10 @@ const rejectIBByEmail = async (req, res) => {
 
     ib.status = "rejected";
     await ib.save();
-    const user = User.findOne({ email });
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: "User not found" });
     // 🔹 Send rejection email
+    console.log(user.email);
     await sendEmail({
       to: user.email,
       subject: "Your Introducing Broker Application Rejected",
