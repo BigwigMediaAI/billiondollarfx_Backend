@@ -255,9 +255,10 @@ exports.verifyAndResetPassword = async (req, res) => {
 
 exports.getAllUsers = async (req, res) => {
   try {
-    const users = await User.find().select(
-      "-password -otp -otpExpires -resetOtp -resetOtpExpires"
-    );
+    const users = await User.find()
+      .select("-password -otp -otpExpires -resetOtp -resetOtpExpires")
+      .sort({ createdAt: -1 }); // ✅ newest first
+
     res.json(users);
   } catch (err) {
     res

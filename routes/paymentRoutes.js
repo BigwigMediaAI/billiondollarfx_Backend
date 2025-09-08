@@ -334,4 +334,51 @@ router.get("/withdrawal/:accountNo", async (req, res) => {
   }
 });
 
+router.get("/deposit", async (req, res) => {
+  try {
+    // Find all deposits for this account, sorted by latest first
+    const deposits = await Order.find().sort({ createdAt: -1 });
+
+    if (!deposits || deposits.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No deposits found ",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      count: deposits.length,
+      deposits,
+    });
+  } catch (err) {
+    console.error("❌ Error fetching deposits:", err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.get("/withdrawal", async (req, res) => {
+  try {
+    // Find all withdrawals for this account, latest first
+    const withdrawals = await Withdrawal.find().sort({
+      createdAt: -1,
+    });
+
+    if (!withdrawals || withdrawals.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No withdrawals found ",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      count: withdrawals.length,
+      withdrawals,
+    });
+  } catch (err) {
+    console.error("❌ Error fetching withdrawals:", err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
 module.exports = router;
