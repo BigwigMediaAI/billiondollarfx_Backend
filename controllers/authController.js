@@ -524,8 +524,28 @@ exports.deleteUser = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
+    await sendEmail({
+      to: user.email,
+      subject: `KYC Verification Rejected - Action Required`,
+      html: `
+        <p>Dear ${user.fullName},</p>
+
+        <p>We regret to inform you that your KYC verification process could not be completed because the required documents were not uploaded within the stipulated 3-day timeframe as part of our compliance procedure.</p>
+
+        <p>As a result, your account has been automatically rejected and deleted from our system for security and regulatory compliance purposes.</p>
+
+        <p>If you wish to use our services in the future, you are welcome to register a new account and follow the KYC verification process from the beginning.</p>
+
+        <p>For further assistance, please contact our support team.</p>
+
+        <p>Thank you for your understanding.</p>
+
+        <p>Best regards,<br/>The Compliance Team</p>
+      `,
+    });
+
     res.json({
-      message: `User with email ${email} deleted successfully 🚮`,
+      message: `User with email ${email} deleted due to incomplete KYC within 3-day deadline 🚮`,
       user,
     });
   } catch (error) {
