@@ -30,12 +30,26 @@ const userSchema = new mongoose.Schema(
 
     accountHolderName: { type: String },
     accountNumber: { type: String },
-    ifscCode: { type: String }, // Optional depending on country
+    ifscCode: { type: String },
     iban: { type: String },
     bankName: { type: String },
     bankAddress: { type: String },
 
-    identityFront: { type: String }, // File path or URL
+    pendingBankDetails: {
+      accountHolderName: { type: String },
+      accountNumber: { type: String },
+      ifscCode: { type: String },
+      iban: { type: String },
+      bankName: { type: String },
+      bankAddress: { type: String },
+    },
+    bankApprovalStatus: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: "approved",
+    },
+
+    identityFront: { type: String },
     identityBack: { type: String },
     addressProof: { type: String },
     selfieProof: { type: String },
@@ -57,6 +71,7 @@ userSchema.virtual("accounts", {
 userSchema.set("toObject", { virtuals: true });
 userSchema.set("toJSON", { virtuals: true });
 
+// Auto-expire unverified accounts after 5 minutes (for example)
 userSchema.index(
   { createdAt: 1 },
   { expireAfterSeconds: 300, partialFilterExpression: { isVerified: false } }

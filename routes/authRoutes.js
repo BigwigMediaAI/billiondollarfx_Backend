@@ -17,6 +17,7 @@ const {
   verifyKyc, // ✅ new controller
   getUnverifiedUsers,
   deleteUser,
+  approveBankDetails,
 } = require("../controllers/authController");
 const upload = require("../middleware/cloudinaryUploader");
 
@@ -47,6 +48,7 @@ router.put(
 );
 
 router.put("/bank/:email", updateBankDetails);
+router.patch("/bank-approve/:email", approveBankDetails);
 
 router.put("/change-password/:email", changePassword);
 router.put("/:email/verify-kyc", verifyKyc);

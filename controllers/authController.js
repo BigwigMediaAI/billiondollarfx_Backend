@@ -395,16 +395,20 @@ exports.updateBankDetails = async (req, res) => {
       bankAddress,
     } = req.body;
 
+    // Save details in pendingBankDetails
     const user = await User.findOneAndUpdate(
       { email },
       {
         $set: {
-          accountHolderName,
-          accountNumber,
-          ifscCode,
-          iban,
-          bankName,
-          bankAddress,
+          pendingBankDetails: {
+            accountHolderName,
+            accountNumber,
+            ifscCode,
+            iban,
+            bankName,
+            bankAddress,
+          },
+          bankApprovalStatus: "pending",
         },
       },
       { new: true }
@@ -412,7 +416,11 @@ exports.updateBankDetails = async (req, res) => {
 
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    res.status(200).json({ success: true, user });
+    res.status(200).json({
+      success: true,
+      message: "Bank details submitted for approval",
+      user,
+    });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -552,5 +560,43 @@ exports.deleteUser = async (req, res) => {
   } catch (error) {
     console.error("Error deleting user:", error);
     res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+exports.approveBankDetails = async (req, res) => {
+  try {
+    const { email } = req.params;
+    const { approve } = req.body; // true = approve, false = reject
+
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (approve) {
+      // Move pendingBankDetails to actual bank fields
+      const { pendingBankDetails } = user;
+      user.accountHolderName = pendingBankDetails.accountHolderName;
+      user.accountNumber = pendingBankDetails.accountNumber;
+      user.ifscCode = pendingBankDetails.ifscCode;
+      user.iban = pendingBankDetails.iban;
+      user.bankName = pendingBankDetails.bankName;
+      user.bankAddress = pendingBankDetails.bankAddress;
+      user.bankApprovalStatus = "approved";
+      user.pendingBankDetails = {}; // clear pending
+    } else {
+      user.bankApprovalStatus = "rejected";
+      user.pendingBankDetails = {}; // clear pending
+    }
+
+    await user.save();
+
+    // Optionally send email to user about approval/rejection
+    // await sendEmail({ to: user.email, subject: "...", html: "..." });
+
+    res.status(200).json({
+      success: true,
+      message: `Bank details ${approve ? "approved" : "rejected"}`,
+      user,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
 };
