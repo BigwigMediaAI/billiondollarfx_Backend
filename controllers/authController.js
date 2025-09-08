@@ -512,3 +512,24 @@ exports.getUnverifiedUsers = async (req, res) => {
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
+
+// Delete a user by email
+exports.deleteUser = async (req, res) => {
+  try {
+    const { email } = req.params;
+
+    const user = await User.findOneAndDelete({ email });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json({
+      message: `User with email ${email} deleted successfully 🚮`,
+      user,
+    });
+  } catch (error) {
+    console.error("Error deleting user:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};

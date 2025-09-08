@@ -16,6 +16,7 @@ const {
   changePassword,
   verifyKyc, // ✅ new controller
   getUnverifiedUsers,
+  deleteUser,
 } = require("../controllers/authController");
 const upload = require("../middleware/cloudinaryUploader");
 
@@ -50,5 +51,6 @@ router.put("/bank/:email", updateBankDetails);
 router.put("/change-password/:email", changePassword);
 router.put("/:email/verify-kyc", verifyKyc);
 router.get("/unverified", getUnverifiedUsers);
+router.delete("/delete/:email", deleteUser);
 
 module.exports = router;
