@@ -18,9 +18,19 @@ exports.register = async (req, res) => {
   } = req.body;
 
   try {
-    const existingUser = await User.findOne({ email });
-    if (existingUser)
+    // 🔍 Check email
+    const existingEmail = await User.findOne({ email });
+    if (existingEmail) {
       return res.status(400).json({ message: "Email already registered" });
+    }
+
+    // 🔍 Check phone
+    const existingPhone = await User.findOne({ phone });
+    if (existingPhone) {
+      return res
+        .status(400)
+        .json({ message: "Phone number already registered" });
+    }
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
