@@ -207,7 +207,9 @@ router.post("/approve/:id", async (req, res) => {
 
     // 🔹 Prepare payload for RameePay
     const payload = { account, ifsc, name, mobile, amount, note, orderid };
+    console.log(payload);
     const encryptedData = encryptData(payload);
+    console.log(encryptedData);
 
     const body = { reqData: encryptedData, agentCode: AGENT_CODE };
     const { data } = await axios.post(RAMEEPAY_WITHDRAWAL_API, body, {
@@ -218,6 +220,7 @@ router.post("/approve/:id", async (req, res) => {
     if (data.data) {
       decryptedResponse = decryptData(data.data);
     }
+    console.log(decryptedResponse);
 
     const usdRate = await fetchRate();
     const amountUSD = (parseFloat(amount) * usdRate).toFixed(2);
