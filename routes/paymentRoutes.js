@@ -243,7 +243,8 @@ router.post("/approve/:id", async (req, res) => {
       await withdrawal.save();
 
       // Send email
-      const user = await User.findOne({ accountNo });
+      const user = await User.findOne({ phone: withdrawal.mobile });
+      console.log(user.email);
       if (user) {
         await sendEmail({
           to: user.email,
@@ -296,7 +297,8 @@ router.post("/reject/:id", async (req, res) => {
     await withdrawal.save();
 
     // Optionally notify user
-    const user = await User.findOne({ accountNo: withdrawal.accountNo });
+    const user = await User.findOne({ phone: withdrawal.mobile });
+    console.log(user);
     if (user) {
       await sendEmail({
         to: user.email,
