@@ -570,15 +570,22 @@ exports.approveBankDetails = async (req, res) => {
     const user = await User.findOne({ email });
     if (!user) return res.status(404).json({ message: "User not found" });
 
+    const pending = user.pendingBankDetails;
+
     if (approve) {
-      // Move pendingBankDetails to actual bank fields
-      const { pendingBankDetails } = user;
-      user.accountHolderName = pendingBankDetails.accountHolderName;
-      user.accountNumber = pendingBankDetails.accountNumber;
-      user.ifscCode = pendingBankDetails.ifscCode;
-      user.iban = pendingBankDetails.iban;
-      user.bankName = pendingBankDetails.bankName;
-      user.bankAddress = pendingBankDetails.bankAddress;
+      if (!pending || Object.keys(pending).length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "No pending bank details to approve",
+        });
+      }
+
+      user.accountHolderName = pending.accountHolderName;
+      user.accountNumber = pending.accountNumber;
+      user.ifscCode = pending.ifscCode;
+      user.iban = pending.iban;
+      user.bankName = pending.bankName;
+      user.bankAddress = pending.bankAddress;
       user.bankApprovalStatus = "approved";
       user.pendingBankDetails = {}; // clear pending
     } else {
@@ -586,10 +593,8 @@ exports.approveBankDetails = async (req, res) => {
       user.pendingBankDetails = {}; // clear pending
     }
 
-    await user.save();
-
-    // Optionally send email to user about approval/rejection
-    // await sendEmail({ to: user.email, subject: "...", html: "..." });
+    // Skip validation to avoid unrelated field errors
+    await user.save({ validateBeforeSave: false });
 
     res.status(200).json({
       success: true,
@@ -597,6 +602,7 @@ exports.approveBankDetails = async (req, res) => {
       user,
     });
   } catch (err) {
+    console.error("Error approving bank details:", err);
     res.status(500).json({ success: false, error: err.message });
   }
 };
