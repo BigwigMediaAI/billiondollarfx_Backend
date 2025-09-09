@@ -10,8 +10,15 @@ const withdrawalSchema = new mongoose.Schema(
     amount: Number,
     note: String,
     accountNo: { type: String, required: true },
-    status: { type: Boolean, default: false }, // false = pending, true = success
-    response: Object,
+
+    // 🔹 Use string enum instead of boolean
+    status: {
+      type: String,
+      enum: ["Pending", "Completed", "Failed", "Rejected"],
+      default: "Pending",
+    },
+
+    response: Object, // store decrypted response from RameePay
   },
   { timestamps: true }
 );

@@ -84,7 +84,6 @@ router.post("/deposit", async (req, res) => {
 
 const AGENT_CODE = process.env.RAMEEPAY_AGENT_CODE;
 const RAMEEPAY_API = "https://apis.rameepay.io/order/generate";
-const RAMEEPAY_WITHDRAWAL_API = "https://apis.rameepay.io/withdrawal/account";
 
 router.post("/ramee/deposit", async (req, res) => {
   try {
@@ -152,20 +151,21 @@ async function fetchRate() {
   }
 }
 
-router.post("/ramee/withdrawal", async (req, res) => {
+const RAMEEPAY_WITHDRAWAL_API = "https://apis.rameepay.io/withdrawal/account";
+
+// Save withdrawal request as Pending
+router.post("/request", async (req, res) => {
   try {
     const { account, ifsc, name, mobile, amount, note, accountNo } = req.body;
 
     if (!account || !ifsc || !name || !mobile || !amount || !accountNo) {
       return res
         .status(400)
-        .json({ success: false, message: "Missing required fields" });
+        .json({ success: false, message: "Missing fields" });
     }
 
-    // Generate unique order ID
     const orderid = `WDR${Date.now()}`;
 
-    // Save request in DB
     const withdrawalRecord = new Withdrawal({
       orderid,
       account,
@@ -175,110 +175,159 @@ router.post("/ramee/withdrawal", async (req, res) => {
       amount,
       note,
       accountNo,
-      status: false,
+      status: "Pending", // 👈 store only pending
     });
     await withdrawalRecord.save();
+
+    res.json({
+      success: true,
+      message: "Withdrawal request submitted",
+      withdrawalRecord,
+    });
+  } catch (err) {
+    console.error("❌ Error saving withdrawal request:", err.message);
+    res.status(500).json({ success: false, error: "Failed to save request" });
+  }
+});
+
+router.post("/approve/:id", async (req, res) => {
+  try {
+    const withdrawal = await Withdrawal.findById(req.params.id);
+    if (!withdrawal)
+      return res.status(404).json({ success: false, message: "Not found" });
+
+    if (withdrawal.status !== "Pending") {
+      return res
+        .status(400)
+        .json({ success: false, message: "Already processed" });
+    }
+
+    const { account, ifsc, name, mobile, amount, note, accountNo, orderid } =
+      withdrawal;
 
     // 🔹 Prepare payload for RameePay
     const payload = { account, ifsc, name, mobile, amount, note, orderid };
     const encryptedData = encryptData(payload);
 
-    const body = {
-      reqData: encryptedData,
-      agentCode: AGENT_CODE,
-    };
-    console.log(encryptedData);
-
-    // 🔹 Call RameePay Withdrawal API
+    const body = { reqData: encryptedData, agentCode: AGENT_CODE };
     const { data } = await axios.post(RAMEEPAY_WITHDRAWAL_API, body, {
       headers: { "Content-Type": "application/json" },
     });
-    console.log(data);
 
     let decryptedResponse = {};
-    console.log(data.data);
     if (data.data) {
       decryptedResponse = decryptData(data.data);
     }
-    console.log("✅ Decrypted Withdrawal Response:", decryptedResponse);
 
     const usdRate = await fetchRate();
     const amountUSD = (parseFloat(amount) * usdRate).toFixed(2);
 
-    // 🔹 If withdrawal succeeded → call MoneyPlant
     if (decryptedResponse.success) {
-      try {
-        const mpResponse = await axios.post(
-          "https://api.moneyplantfx.com/WSMoneyplant.aspx?type=SNDPAddBalance",
-          {
-            accountno: accountNo,
-            amount: -Math.abs(amountUSD), // negative for withdrawal
-            orderid,
-          },
-          { headers: { "Content-Type": "application/json" } }
-        );
-
-        console.log("💰 MoneyPlant Response:", mpResponse.data);
-
-        await Withdrawal.findOneAndUpdate(
-          { orderid },
-          { status: true, response: decryptedResponse }
-        );
-        // ✅ 6. Send confirmation email to user
-        // ✅ After MoneyPlant success
-        const user = await User.findOne({ accountNo: accountNo });
-        console.log(user);
-        if (user) {
-          await sendEmail({
-            to: user.email,
-            subject: "Withdrawal Successful - Funds Deducted",
-            html: `
-      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-        <h2 style="color: #2c3e50;">Withdrawal Confirmation</h2>
-        <p>Dear ${user.fullName || "Customer"},</p>
-        
-        <p>Your withdrawal request has been <strong>successfully processed</strong> and the amount has been deducted from your trading balance.</p>
-        
-        <p><strong>Transaction Details:</strong></p>
-        <ul>
-          <li><strong>Order ID:</strong> ${orderid}</li>
-          <li><strong>Amount Withdrawn:</strong> ₹${amount} (≈ $${amountUSD})</li>
-          <li><strong>Bank Account:</strong> ${account}</li>
-          <li><strong>IFSC Code:</strong> ${ifsc}</li>
-          <li><strong>Beneficiary Name:</strong> ${name}</li>
-          <li><strong>Note:</strong> ${note || "N/A"}</li>
-          <li><strong>Status:</strong> ✅ Successful</li>
-          <li><strong>Date & Time:</strong> ${new Date().toLocaleString()}</li>
-        </ul>
-
-        <p>The amount has been transferred to your registered bank account <strong>${accountNo}</strong>.</p>
-
-        <p>If you did not initiate this transaction, please contact our support team immediately.</p>
-        
-        <br/>
-        <p>Best Regards,<br/>The Support Team</p>
-      </div>
-    `,
-          });
-        }
-      } catch (err) {
-        console.error("❌ MoneyPlant Error:", err.message);
-      }
-    } else {
-      await Withdrawal.findOneAndUpdate(
-        { orderid },
-        { status: false, response: decryptedResponse }
+      // MoneyPlant update
+      await axios.post(
+        "https://api.moneyplantfx.com/WSMoneyplant.aspx?type=SNDPAddBalance",
+        {
+          accountno: accountNo,
+          amount: -Math.abs(amountUSD),
+          orderid,
+        },
+        { headers: { "Content-Type": "application/json" } }
       );
+
+      // Update withdrawal status
+      withdrawal.status = "Completed";
+      withdrawal.response = decryptedResponse;
+      await withdrawal.save();
+
+      // Send email
+      const user = await User.findOne({ accountNo });
+      if (user) {
+        await sendEmail({
+          to: user.email,
+          subject: "Withdrawal Successful",
+          html: `<p>Hi ${user.fullName}, your withdrawal of ₹${amount} (≈ $${amountUSD}) is successful.</p>`,
+        });
+      }
+
+      return res.json({
+        success: true,
+        message: "Withdrawal completed",
+        decryptedResponse,
+      });
+    } else {
+      withdrawal.status = "Failed";
+      withdrawal.response = decryptedResponse;
+      await withdrawal.save();
+      return res.json({
+        success: false,
+        message: "Withdrawal failed",
+        decryptedResponse,
+      });
+    }
+  } catch (err) {
+    console.error("❌ Approve withdrawal error:", err.message);
+    res
+      .status(500)
+      .json({ success: false, error: "Withdrawal processing failed" });
+  }
+});
+
+// Reject withdrawal request (Admin action)
+router.post("/reject/:id", async (req, res) => {
+  try {
+    const withdrawal = await Withdrawal.findById(req.params.id);
+    if (!withdrawal) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Withdrawal not found" });
     }
 
-    res.json({
-      success: true,
-      raw: data,
-      decrypted: decryptedResponse,
-    });
+    if (withdrawal.status !== "Pending") {
+      return res
+        .status(400)
+        .json({ success: false, message: "Withdrawal already processed" });
+    }
+
+    withdrawal.status = "Rejected";
+    withdrawal.response = { message: "Rejected by admin" };
+    await withdrawal.save();
+
+    // Optionally notify user
+    const user = await User.findOne({ accountNo: withdrawal.accountNo });
+    if (user) {
+      await sendEmail({
+        to: user.email,
+        subject: "Withdrawal Request Rejected",
+        html: `
+          <p>Dear ${user.fullName || "Customer"},</p>
+          <p>Your withdrawal request (Order ID: <b>${
+            withdrawal.orderid
+          }</b>) has been <b>rejected</b> by the admin.</p>
+          <p>Amount Requested: ₹${withdrawal.amount}</p>
+          <p>If you think this was a mistake, please contact support.</p>
+          <br/>
+          <p>Best Regards,<br/>Support Team</p>
+        `,
+      });
+    }
+
+    res.json({ success: true, message: "Withdrawal rejected successfully" });
   } catch (err) {
-    console.error("❌ Withdrawal Error:", err.response?.data || err.message);
-    res.status(500).json({ success: false, error: "Withdrawal failed" });
+    console.error("❌ Reject withdrawal error:", err.message);
+    res
+      .status(500)
+      .json({ success: false, error: "Failed to reject withdrawal" });
+  }
+});
+
+router.get("/withdrawals", async (req, res) => {
+  try {
+    const withdrawals = await Withdrawal.find({ status: "Pending" }).sort({
+      createdAt: -1,
+    });
+    res.json({ success: true, data: withdrawals });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
