@@ -309,12 +309,14 @@ router.post("/reject/:id", async (req, res) => {
     const usdRate = await fetchRate();
     const amountUSD = (parseFloat(withdrawal.amount) * usdRate).toFixed(2);
 
+    const refundOrderId = `${withdrawal.orderid}-REFUND`;
+
     await axios.post(
       "https://api.moneyplantfx.com/WSMoneyplant.aspx?type=SNDPAddBalance",
       {
         accountno: withdrawal.accountNo,
         amount: +Math.abs(amountUSD),
-        orderid: withdrawal.orderid,
+        orderid: refundOrderId,
       },
       { headers: { "Content-Type": "application/json" } }
     );
@@ -325,6 +327,7 @@ router.post("/reject/:id", async (req, res) => {
 
     // Notify user
     const user = await User.findOne({ phone: withdrawal.mobile });
+    console.log(user);
     if (user) {
       await sendEmail({
         to: user.email,
