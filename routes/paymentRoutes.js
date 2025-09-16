@@ -208,9 +208,9 @@ router.post("/request", async (req, res) => {
 router.post("/approve/:id", async (req, res) => {
   try {
     const withdrawal = await Withdrawal.findById(req.params.id);
-    console.log(withdrawal);
-    if (!withdrawal)
+    if (!withdrawal) {
       return res.status(404).json({ success: false, message: "Not found" });
+    }
 
     if (withdrawal.status !== "Pending") {
       return res
@@ -220,32 +220,40 @@ router.post("/approve/:id", async (req, res) => {
 
     const { account, ifsc, name, mobile, amount, note, orderid } = withdrawal;
 
-    // 🔹 Only call RameePay now
+    // 🔹 Payload for RameePay
     const payload = {
       account,
       ifsc,
       name,
       mobile,
-      amount: parseFloat(amount).toFixed(2), // ensure "1000.00"
+      amount: parseFloat(amount).toFixed(2), // "1000.00"
       note,
       orderid,
     };
-    const encryptedData = encryptData(JSON.stringify(payload));
-    console.log(encryptedData);
-    const body = { reqData: encryptedData, agentCode: AGENT_CODE };
 
-    console.log("📤 Sending to RameePay:", body);
+    const encryptedData = encryptData(JSON.stringify(payload));
+    const body = { reqData: encryptedData, agentCode: AGENT_CODE };
 
     const { data } = await axios.post(RAMEEPAY_WITHDRAWAL_API, body, {
       headers: { "Content-Type": "application/json" },
     });
 
     let decryptedResponse = {};
-    if (data.data) {
+
+    if (data.status === "true") {
       decryptedResponse = decryptData(data.data);
+    } else {
+      // API returned failure without decrypting
+      decryptedResponse = {
+        success: false,
+        message: "RameePay rejected request",
+      };
     }
 
-    if (decryptedResponse.success) {
+    console.log("🔓 RameePay Response:", decryptedResponse);
+
+    if (decryptedResponse.success === true) {
+      // ✅ Mark as completed
       withdrawal.status = "Completed";
       withdrawal.response = decryptedResponse;
       await withdrawal.save();
@@ -269,7 +277,7 @@ router.post("/approve/:id", async (req, res) => {
         decryptedResponse,
       });
     } else {
-      // ❌ If RameePay failed → refund MoneyPlant
+      // ❌ Failed → refund MoneyPlant
       const usdRate = await fetchRate();
       const amountUSD = (parseFloat(amount) * usdRate).toFixed(2);
       const refundOrderId = `RF${Date.now()}`;
@@ -278,7 +286,7 @@ router.post("/approve/:id", async (req, res) => {
         "https://api.moneyplantfx.com/WSMoneyplant.aspx?type=SNDPAddBalance",
         {
           accountno: withdrawal.accountNo,
-          amount: +Math.abs(amountUSD), // refund
+          amount: +Math.abs(amountUSD),
           orderid: refundOrderId,
         },
         { headers: { "Content-Type": "application/json" } }
