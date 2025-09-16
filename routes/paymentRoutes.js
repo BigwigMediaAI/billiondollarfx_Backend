@@ -231,7 +231,7 @@ router.post("/approve/:id", async (req, res) => {
       orderid,
     };
 
-    const encryptedData = encryptData(JSON.stringify(payload));
+    const encryptedData = encryptData(payload);
     const body = { reqData: encryptedData, agentCode: AGENT_CODE };
 
     const { data } = await axios.post(RAMEEPAY_WITHDRAWAL_API, body, {
@@ -240,19 +240,13 @@ router.post("/approve/:id", async (req, res) => {
 
     let decryptedResponse = {};
 
-    if (data.status === "true") {
+    if (data.data) {
       decryptedResponse = decryptData(data.data);
-    } else {
-      // API returned failure without decrypting
-      decryptedResponse = {
-        success: false,
-        message: "RameePay rejected request",
-      };
     }
 
     console.log("🔓 RameePay Response:", decryptedResponse);
 
-    if (decryptedResponse.success === true) {
+    if (decryptedResponse && decryptedResponse.success === true) {
       // ✅ Mark as completed
       withdrawal.status = "Completed";
       withdrawal.response = decryptedResponse;
