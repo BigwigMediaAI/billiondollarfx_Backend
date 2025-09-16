@@ -208,6 +208,7 @@ router.post("/request", async (req, res) => {
 router.post("/approve/:id", async (req, res) => {
   try {
     const withdrawal = await Withdrawal.findById(req.params.id);
+    console.log(withdrawal);
     if (!withdrawal)
       return res.status(404).json({ success: false, message: "Not found" });
 
@@ -222,6 +223,7 @@ router.post("/approve/:id", async (req, res) => {
     // 🔹 Only call RameePay now
     const payload = { account, ifsc, name, mobile, amount, note, orderid };
     const encryptedData = encryptData(payload);
+    console.log(encryptedData);
     const body = { reqData: encryptedData, agentCode: AGENT_CODE };
 
     const { data } = await axios.post(RAMEEPAY_WITHDRAWAL_API, body, {
@@ -260,13 +262,14 @@ router.post("/approve/:id", async (req, res) => {
       // ❌ If RameePay failed → refund MoneyPlant
       const usdRate = await fetchRate();
       const amountUSD = (parseFloat(amount) * usdRate).toFixed(2);
+      const refundOrderId = `RF${Date.now()}`;
 
       await axios.post(
         "https://api.moneyplantfx.com/WSMoneyplant.aspx?type=SNDPAddBalance",
         {
           accountno: withdrawal.accountNo,
           amount: +Math.abs(amountUSD), // refund
-          orderid: withdrawal.orderid,
+          orderid: refundOrderId,
         },
         { headers: { "Content-Type": "application/json" } }
       );
