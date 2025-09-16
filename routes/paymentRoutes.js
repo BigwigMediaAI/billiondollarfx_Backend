@@ -166,6 +166,21 @@ router.post("/request", async (req, res) => {
 
     const orderid = `WDR${Date.now()}`;
 
+    // 🔹 First, deduct from MoneyPlant to lock balance
+    const usdRate = await fetchRate();
+    const amountUSD = (parseFloat(amount) * usdRate).toFixed(2);
+
+    await axios.post(
+      "https://api.moneyplantfx.com/WSMoneyplant.aspx?type=SNDPAddBalance",
+      {
+        accountno: accountNo,
+        amount: -Math.abs(amountUSD),
+        orderid,
+      },
+      { headers: { "Content-Type": "application/json" } }
+    );
+
+    // 🔹 Save withdrawal record in Pending state
     const withdrawalRecord = new Withdrawal({
       orderid,
       account,
@@ -175,7 +190,7 @@ router.post("/request", async (req, res) => {
       amount,
       note,
       accountNo,
-      status: "Pending", // 👈 store only pending
+      status: "Pending",
     });
     await withdrawalRecord.save();
 
@@ -202,16 +217,13 @@ router.post("/approve/:id", async (req, res) => {
         .json({ success: false, message: "Already processed" });
     }
 
-    const { account, ifsc, name, mobile, amount, note, accountNo, orderid } =
-      withdrawal;
+    const { account, ifsc, name, mobile, amount, note, orderid } = withdrawal;
 
-    // 🔹 Prepare payload for RameePay
+    // 🔹 Only call RameePay now
     const payload = { account, ifsc, name, mobile, amount, note, orderid };
-    console.log(payload);
     const encryptedData = encryptData(payload);
-    console.log(encryptedData);
-
     const body = { reqData: encryptedData, agentCode: AGENT_CODE };
+
     const { data } = await axios.post(RAMEEPAY_WITHDRAWAL_API, body, {
       headers: { "Content-Type": "application/json" },
     });
@@ -220,32 +232,18 @@ router.post("/approve/:id", async (req, res) => {
     if (data.data) {
       decryptedResponse = decryptData(data.data);
     }
-    console.log(decryptedResponse);
-
-    const usdRate = await fetchRate();
-    const amountUSD = (parseFloat(amount) * usdRate).toFixed(2);
 
     if (decryptedResponse.success) {
-      // MoneyPlant update
-      await axios.post(
-        "https://api.moneyplantfx.com/WSMoneyplant.aspx?type=SNDPAddBalance",
-        {
-          accountno: accountNo,
-          amount: -Math.abs(amountUSD),
-          orderid,
-        },
-        { headers: { "Content-Type": "application/json" } }
-      );
-
-      // Update withdrawal status
       withdrawal.status = "Completed";
       withdrawal.response = decryptedResponse;
       await withdrawal.save();
 
-      // Send email
+      // Send success email
       const user = await User.findOne({ phone: withdrawal.mobile });
-      console.log(user.email);
       if (user) {
+        const usdRate = await fetchRate();
+        const amountUSD = (parseFloat(amount) * usdRate).toFixed(2);
+
         await sendEmail({
           to: user.email,
           subject: "Withdrawal Successful",
@@ -259,12 +257,27 @@ router.post("/approve/:id", async (req, res) => {
         decryptedResponse,
       });
     } else {
+      // ❌ If RameePay failed → refund MoneyPlant
+      const usdRate = await fetchRate();
+      const amountUSD = (parseFloat(amount) * usdRate).toFixed(2);
+
+      await axios.post(
+        "https://api.moneyplantfx.com/WSMoneyplant.aspx?type=SNDPAddBalance",
+        {
+          accountno: withdrawal.accountNo,
+          amount: +Math.abs(amountUSD), // refund
+          orderid: withdrawal.orderid,
+        },
+        { headers: { "Content-Type": "application/json" } }
+      );
+
       withdrawal.status = "Failed";
       withdrawal.response = decryptedResponse;
       await withdrawal.save();
+
       return res.json({
         success: false,
-        message: "Withdrawal failed",
+        message: "Withdrawal failed, amount refunded",
         decryptedResponse,
       });
     }
@@ -292,13 +305,26 @@ router.post("/reject/:id", async (req, res) => {
         .json({ success: false, message: "Withdrawal already processed" });
     }
 
+    // 🔹 Refund via MoneyPlant
+    const usdRate = await fetchRate();
+    const amountUSD = (parseFloat(withdrawal.amount) * usdRate).toFixed(2);
+
+    await axios.post(
+      "https://api.moneyplantfx.com/WSMoneyplant.aspx?type=SNDPAddBalance",
+      {
+        accountno: withdrawal.accountNo,
+        amount: +Math.abs(amountUSD),
+        orderid: withdrawal.orderid,
+      },
+      { headers: { "Content-Type": "application/json" } }
+    );
+
     withdrawal.status = "Rejected";
     withdrawal.response = { message: "Rejected by admin" };
     await withdrawal.save();
 
-    // Optionally notify user
+    // Notify user
     const user = await User.findOne({ phone: withdrawal.mobile });
-    console.log(user);
     if (user) {
       await sendEmail({
         to: user.email,
@@ -309,14 +335,14 @@ router.post("/reject/:id", async (req, res) => {
             withdrawal.orderid
           }</b>) has been <b>rejected</b> by the admin.</p>
           <p>Amount Requested: ₹${withdrawal.amount}</p>
-          <p>If you think this was a mistake, please contact support.</p>
+          <p>The amount has been refunded to your account.</p>
           <br/>
           <p>Best Regards,<br/>Support Team</p>
         `,
       });
     }
 
-    res.json({ success: true, message: "Withdrawal rejected successfully" });
+    res.json({ success: true, message: "Withdrawal rejected & refunded" });
   } catch (err) {
     console.error("❌ Reject withdrawal error:", err.message);
     res
