@@ -309,7 +309,7 @@ router.post("/reject/:id", async (req, res) => {
     const usdRate = await fetchRate();
     const amountUSD = (parseFloat(withdrawal.amount) * usdRate).toFixed(2);
 
-    const refundOrderId = `${withdrawal.orderid}-REFUND`;
+    const refundOrderId = `RF${Date.now()}`;
 
     console.log(withdrawal.accountNo, amountUSD, refundOrderId);
 
