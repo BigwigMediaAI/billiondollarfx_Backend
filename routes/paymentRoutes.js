@@ -221,10 +221,20 @@ router.post("/approve/:id", async (req, res) => {
     const { account, ifsc, name, mobile, amount, note, orderid } = withdrawal;
 
     // 🔹 Only call RameePay now
-    const payload = { account, ifsc, name, mobile, amount, note, orderid };
-    const encryptedData = encryptData(payload);
+    const payload = {
+      account,
+      ifsc,
+      name,
+      mobile,
+      amount: parseFloat(amount).toFixed(2), // ensure "1000.00"
+      note,
+      orderid,
+    };
+    const encryptedData = encryptData(JSON.stringify(payload));
     console.log(encryptedData);
     const body = { reqData: encryptedData, agentCode: AGENT_CODE };
+
+    console.log("📤 Sending to RameePay:", body);
 
     const { data } = await axios.post(RAMEEPAY_WITHDRAWAL_API, body, {
       headers: { "Content-Type": "application/json" },
@@ -285,7 +295,7 @@ router.post("/approve/:id", async (req, res) => {
       });
     }
   } catch (err) {
-    console.error("❌ Approve withdrawal error:", err.message);
+    console.error("RameePay error:", err.response?.data || err.message);
     res
       .status(500)
       .json({ success: false, error: "Withdrawal processing failed" });
