@@ -4,6 +4,7 @@ const { decryptData } = require("../utils/rameeCrypto");
 const Order = require("../models/Order");
 const User = require("../models/User");
 const sendEmail = require("../utils/sendEmail");
+const Account = require("../models/account.model"); // Ensure you import Account model
 
 exports.handlePaymentCallback = async (req, res) => {
   try {
@@ -151,16 +152,19 @@ exports.handleRameeCallback = async (req, res) => {
         console.log("💰 MoneyPlant Response:", mpResponse.data);
 
         // ✅ 6. Send confirmation email to user
-        const user = await User.findOne({ accountNo: accountno });
-        console.log(user);
-        if (user) {
+        const account = await Account.findOne({ accountno }).populate("user");
+        console.log(account);
+        if (account) {
           await sendEmail({
-            to: user.email,
+            to: account.user.email,
             subject: "Deposit Successful - Balance Updated",
             html: `
               <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
                 <h2 style="color: #2c3e50;">Deposit Confirmation</h2>
-                <p>Dear ${user.fullName || "Customer"},</p>
+                <p>Dear ${account.user.fullName || "Customer"},</p>
+                <img src="https://res.cloudinary.com/dqrlkbsdq/image/upload/v1758094566/Your_deposit_has_been_credited_rczjut.jpg" 
+         alt="Withdrawal Processed" 
+         style="width:600px; max-width:100%; height:auto; display:block; margin-top:20px;" />
                 <p>Your deposit has been successfully processed and your trading balance has been updated.</p>
                 
                 <p><strong>Transaction Details:</strong></p>

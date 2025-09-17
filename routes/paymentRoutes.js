@@ -274,7 +274,14 @@ router.post("/approve/:id", async (req, res) => {
         await sendEmail({
           to: user.email,
           subject: "Withdrawal Successful",
-          html: `<p>Hi ${user.fullName}, your withdrawal of ₹${amount} (≈ $${amountUSD}) is successful.</p>`,
+          html: `
+    <p>Hi ${user.fullName},</p>
+    <p>Your withdrawal of ₹${amount} (≈ $${amountUSD}) is successful.</p>
+    <img src="https://res.cloudinary.com/dqrlkbsdq/image/upload/v1758094566/Your_Withdrawal_Processed_p4rluh.jpg" 
+         alt="Withdrawal Processed" 
+         style="width:600px; max-width:100%; height:auto; display:block; margin-top:20px;" />
+    <p>Thank you for using our service!</p>
+  `,
         });
       }
 
