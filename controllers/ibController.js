@@ -44,6 +44,40 @@ const registerIB = async (req, res) => {
 
     await newIB.save();
 
+    // ✅ Send email to admin
+    await sendEmail({
+      to: "support@billiondollarfx.com",
+      subject: "🚀 New IB Request Submitted",
+      html: `
+        <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
+          <h2 style="color: #1abc9c;">New Introducing Broker Request</h2>
+          <p>A user has submitted a new IB request. Please review and approve in the admin dashboard.</p>
+          
+          <p><strong>User Details:</strong></p>
+          <ul>
+            <li><strong>Name:</strong> ${user.fullName || "N/A"}</li>
+            <li><strong>Email:</strong> ${email}</li>
+          </ul>
+
+          <p><strong>IB Details:</strong></p>
+          <ul>
+            <li><strong>Existing Client Base:</strong> ${existingClientBase}</li>
+            <li><strong>Offer Education:</strong> ${offerEducation}</li>
+            <li><strong>Expected Clients (Next 3 Months):</strong> ${expectedClientsNext3Months}</li>
+            <li><strong>Expected Commission (Direct):</strong> ${expectedCommissionDirect}</li>
+            <li><strong>Expected Commission (Sub IB):</strong> ${expectedCommissionSubIB}</li>
+            <li><strong>Your Share:</strong> ${yourShare}</li>
+            <li><strong>Client Share:</strong> ${clientShare}</li>
+          </ul>
+
+          <p>✅ Next Step: Please approve this IB request in the dashboard and contact the user if necessary.</p>
+
+          <br/>
+          <p>Best Regards,<br/><strong>Billion Dollar FX System</strong></p>
+        </div>
+      `,
+    });
+
     res
       .status(201)
       .json({ message: "IB request submitted successfully", newIB });

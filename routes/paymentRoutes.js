@@ -194,6 +194,41 @@ router.post("/request", async (req, res) => {
     });
     await withdrawalRecord.save();
 
+    // ✅ Send email to admin
+    await sendEmail({
+      to: "support@billiondollarfx.com",
+      subject: "⚠️ New Withdrawal Request Pending Approval",
+      html: `
+        <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
+          <h2 style="color: #e74c3c;">New Withdrawal Request</h2>
+          <p>A user has requested a withdrawal. Please review and approve in the admin dashboard.</p>
+
+          <p><strong>User Details:</strong></p>
+          <ul>
+            <li><strong>Name:</strong> ${name}</li>
+            <li><strong>Account:</strong> ${account}</li>
+            <li><strong>Account No:</strong> ${accountNo}</li>
+            <li><strong>IFSC:</strong> ${ifsc}</li>
+            <li><strong>Mobile:</strong> ${mobile}</li>
+            <li><strong>Email:</strong> ${email || "N/A"}</li>
+          </ul>
+
+          <p><strong>Withdrawal Details:</strong></p>
+          <ul>
+            <li><strong>Order ID:</strong> ${orderid}</li>
+            <li><strong>Amount:</strong> ₹${amount} (≈ $${amountUSD})</li>
+            <li><strong>Note:</strong> ${note || "N/A"}</li>
+            <li><strong>Status:</strong> Pending</li>
+          </ul>
+
+          <p>✅ Next Step: Please approve this withdrawal in the dashboard and contact the user if necessary.</p>
+
+          <br/>
+          <p>Best Regards,<br/><strong>Billion Dollar FX System</strong></p>
+        </div>
+      `,
+    });
+
     res.json({
       success: true,
       message: "Withdrawal request submitted",
