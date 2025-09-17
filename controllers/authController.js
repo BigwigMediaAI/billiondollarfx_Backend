@@ -500,13 +500,7 @@ exports.verifyKyc = async (req, res) => {
             ? "You can now access all features of your account."
             : "Please contact support for further assistance."
         }</p>
-        ${
-          !status
-            ? `<img src="https://res.cloudinary.com/dqrlkbsdq/image/upload/v1758094566/Your_Account_Rejected_Due_to_KYC_exjpm2.jpg"
-                    alt="KYC Rejected"
-                    style="width:600px; max-width:100%; height:auto; display:block; margin-top:20px;" />`
-            : ""
-        }
+       
         <p>Thank you</p>
       `,
     });
@@ -547,6 +541,8 @@ exports.deleteUser = async (req, res) => {
       subject: `KYC Verification Rejected - Action Required`,
       html: `
         <p>Dear ${user.fullName},</p>
+        <img src="https://res.cloudinary.com/dqrlkbsdq/image/upload/v1758094566/Your_Account_Rejected_Due_to_KYC_exjpm2.jpg" 
+         alt="Welcome Image" style="width:600px; max-width:100%; height:auto; display:block; margin-top:20px;" />
 
         <p>We regret to inform you that your KYC verification process could not be completed because the required documents were not uploaded within the stipulated 3-day timeframe as part of our compliance procedure.</p>
 
