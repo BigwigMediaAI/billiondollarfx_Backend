@@ -245,7 +245,16 @@ router.post("/approve/:id", async (req, res) => {
 
     let decryptedResponse = {};
     if (data.data) {
-      decryptedResponse = decryptData(data.data);
+      if (typeof data.data === "string") {
+        decryptedResponse = decryptData(data.data);
+      } else {
+        console.error(
+          "Expected string in data.data, got:",
+          typeof data.data,
+          data.data
+        );
+        decryptedResponse = data.data; // fallback, store raw object
+      }
     }
 
     console.log("🔓 Decrypted RameePay Response:", decryptedResponse);
@@ -302,9 +311,16 @@ router.post("/approve/:id", async (req, res) => {
       });
     }
   } catch (err) {
-    console.error("RameePay error:", err.response?.data || err.message);
-    const decryptedData = decryptData(err.response?.data);
-    console.log("response:", decryptedData);
+    if (
+      err.response?.data?.data &&
+      typeof err.response.data.data === "string"
+    ) {
+      const decryptedData = decryptData(err.response.data.data);
+      console.log("response:", decryptedData);
+    } else {
+      console.log("Raw error response:", err.response?.data);
+    }
+
     res
       .status(500)
       .json({ success: false, error: "Withdrawal processing failed" });
