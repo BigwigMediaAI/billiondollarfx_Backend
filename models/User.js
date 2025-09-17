@@ -53,6 +53,7 @@ const userSchema = new mongoose.Schema(
     identityBack: { type: String },
     addressProof: { type: String },
     selfieProof: { type: String },
+    hasSubmittedDocuments: { type: Boolean, default: false },
     isKycVerified: { type: Boolean, default: false },
 
     createdAt: { type: Date, default: Date.now },

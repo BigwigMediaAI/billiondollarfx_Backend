@@ -390,7 +390,20 @@ exports.updateDocuments = async (req, res) => {
   try {
     const { email } = req.params;
 
-    // console.log("FILES:", req.files); // Debug
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found." });
+    }
+
+    if (user.hasSubmittedDocuments) {
+      return res.status(400).json({
+        success: false,
+        message: "Documents already submitted. Resubmission is not allowed.",
+      });
+    }
 
     const identityFront = req.files?.identityFront?.[0]?.path;
     const identityBack = req.files?.identityBack?.[0]?.path;
@@ -409,22 +422,18 @@ exports.updateDocuments = async (req, res) => {
         .json({ success: false, message: "No files uploaded" });
     }
 
-    const user = await User.findOneAndUpdate(
+    updateFields.hasSubmittedDocuments = true;
+
+    const updatedUser = await User.findOneAndUpdate(
       { email },
       { $set: updateFields },
       { new: true }
     );
 
-    if (!user) {
-      return res
-        .status(404)
-        .json({ success: false, message: "User not found." });
-    }
-
     res.status(200).json({
       success: true,
-      message: "Documents updated successfully",
-      user,
+      message: "Documents submitted successfully",
+      user: updatedUser,
     });
   } catch (err) {
     console.error("Update failed:", err);
