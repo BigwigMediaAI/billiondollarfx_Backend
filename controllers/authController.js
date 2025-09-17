@@ -112,11 +112,13 @@ exports.verifyOTP = async (req, res) => {
       to: user.email,
       subject: "Your Account is Verified",
       html: `
-        <p>Hi ${user.fullName},</p>
-        <p>Congratulations! Your account has been successfully verified.</p>
-        <p>You can now log in and start using your account.</p>
-        <p>Thank you</p>
-      `,
+    <p>Hi ${user.fullName},</p>
+    <p>Congratulations! Your account has been successfully verified.</p>
+    <img src="https://res.cloudinary.com/dqrlkbsdq/image/upload/v1758094566/welcome_to_billiondollarfx_bn6rs2.jpg" 
+         alt="Welcome Image" style="width:600px; max-width:100%; height:auto; display:block; margin-top:20px;" />
+    <p>You can now log in and start using your account.</p>
+    <p>Thank you</p>
+  `,
     });
 
     res.status(201).json({
