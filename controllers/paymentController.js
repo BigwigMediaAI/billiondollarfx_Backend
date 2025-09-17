@@ -150,9 +150,11 @@ exports.handleRameeCallback = async (req, res) => {
         );
 
         console.log("💰 MoneyPlant Response:", mpResponse.data);
-
+        // const AccountNo=accountno
         // ✅ 6. Send confirmation email to user
-        const account = await Account.findOne({ accountno }).populate("user");
+        const account = await Account.findOne({
+          accountNo: accountno,
+        }).populate("user");
         console.log(account);
         if (account) {
           await sendEmail({
