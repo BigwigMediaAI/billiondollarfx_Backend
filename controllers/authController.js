@@ -110,14 +110,62 @@ exports.verifyOTP = async (req, res) => {
     });
     await sendEmail({
       to: user.email,
-      subject: "Your Account is Verified",
+      subject: "Welcome to Billion Dollar FX 🎉",
       html: `
-    <p>Hi ${user.fullName},</p>
-    <p>Congratulations! Your account has been successfully verified.</p>
-    <img src="https://res.cloudinary.com/dqrlkbsdq/image/upload/v1758094566/welcome_to_billiondollarfx_bn6rs2.jpg" 
-         alt="Welcome Image" style="width:600px; max-width:100%; height:auto; display:block; margin-top:20px;" />
-    <p>You can now log in and start using your account.</p>
-    <p>Thank you</p>
+    <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
+      <h2 style="color: #00CFFF;">Welcome, ${user.fullName}!</h2>
+      
+      <p>We’re excited to have you on board with <strong>Billion Dollar FX</strong>.</p>
+      
+      <p>Your account has been successfully created. You can now log in and start exploring the platform.</p>
+      
+      <p style="color:#d9534f; font-weight:bold;">
+        🔔 To activate your account fully, please go to <strong>Settings</strong> and upload your documents and bank details for KYC verification.
+      </p>
+      
+      <img src="https://res.cloudinary.com/dqrlkbsdq/image/upload/v1758094566/welcome_to_billiondollarfx_bn6rs2.jpg" 
+           alt="Welcome Image" style="width:600px; max-width:100%; height:auto; display:block; margin:20px auto;" />
+      
+      <p>If you have any questions or need assistance, our support team is here to help.</p>
+      
+      <p>We look forward to seeing you succeed in your trading journey 🚀</p>
+      
+      <br/>
+      <p>Best Regards,<br/><strong>The Billion Dollar FX Team</strong></p>
+    </div>
+  `,
+    });
+
+    await sendEmail({
+      to: "support@billiondollarfx.com",
+      subject: "🔔 New User Registered on Billion Dollar FX",
+      html: `
+    <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
+      <h2 style="color: #00CFFF;">New User Registration Alert</h2>
+      
+      <p>A new user has just registered on <strong>Billion Dollar FX</strong>.</p>
+      
+      <p><strong>User Details:</strong></p>
+      <ul>
+        <li><strong>Full Name:</strong> ${user.fullName}</li>
+        <li><strong>Email:</strong> ${user.email}</li>
+        <li><strong>Phone:</strong> ${user.phone || "Not Provided"}</li>
+        <li><strong>Registration Date:</strong> ${new Date().toLocaleString()}</li>
+      </ul>
+      
+      <p>
+        Please log in to the admin panel to verify their account.  
+        If the user has not yet uploaded their <strong>documents</strong> or <strong>bank details</strong>,  
+        kindly reach out to them and request the necessary information for KYC verification.
+      </p>
+      
+      <p style="margin-top:20px;">
+        ✅ Next Step: <strong>Check user’s profile in the admin dashboard.</strong>
+      </p>
+      
+      <br/>
+      <p>Best Regards,<br/><strong>Billion Dollar FX System</strong></p>
+    </div>
   `,
     });
 
@@ -418,9 +466,43 @@ exports.updateBankDetails = async (req, res) => {
 
     if (!user) return res.status(404).json({ message: "User not found" });
 
+    // ✅ Send email to admin
+    await sendEmail({
+      to: "support@billiondollarfx.com",
+      subject: "⚠️ Bank Details Update - Pending Approval",
+      html: `
+        <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
+          <h2 style="color: #e67e22;">Bank Details Update Alert</h2>
+          
+          <p><strong>${user.fullName}</strong> (${
+        user.email
+      }) has updated their bank details.</p>
+          
+          <p><strong>Updated Bank Information (Pending Approval):</strong></p>
+          <ul>
+            <li><strong>Account Holder Name:</strong> ${accountHolderName}</li>
+            <li><strong>Account Number:</strong> ${accountNumber}</li>
+            <li><strong>IFSC Code:</strong> ${ifscCode || "N/A"}</li>
+            <li><strong>IBAN:</strong> ${iban || "N/A"}</li>
+            <li><strong>Bank Name:</strong> ${bankName}</li>
+            <li><strong>Bank Address:</strong> ${bankAddress}</li>
+          </ul>
+
+          <p>
+            ✅ Next Step: Please verify these details in the admin dashboard.<br/>
+            Once confirmed, approve them for transactions.<br/>
+            If necessary, contact the user directly for confirmation.
+          </p>
+          
+          <br/>
+          <p>Best Regards,<br/><strong>Billion Dollar FX System</strong></p>
+        </div>
+      `,
+    });
+
     res.status(200).json({
       success: true,
-      message: "Bank details submitted for approval",
+      message: "Bank details submitted for approval & admin notified",
       user,
     });
   } catch (err) {
