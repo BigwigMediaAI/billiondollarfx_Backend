@@ -500,6 +500,13 @@ exports.verifyKyc = async (req, res) => {
             ? "You can now access all features of your account."
             : "Please contact support for further assistance."
         }</p>
+        ${
+          !status
+            ? `<img src="https://res.cloudinary.com/dqrlkbsdq/image/upload/v1758094566/Your_Account_Rejected_Due_to_KYC_exjpm2.jpg"
+                    alt="KYC Rejected"
+                    style="width:600px; max-width:100%; height:auto; display:block; margin-top:20px;" />`
+            : ""
+        }
         <p>Thank you</p>
       `,
     });
