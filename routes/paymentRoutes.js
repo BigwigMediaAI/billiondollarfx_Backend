@@ -218,37 +218,40 @@ router.post("/approve/:id", async (req, res) => {
         .json({ success: false, message: "Already processed" });
     }
 
-    const { account, ifsc, name, mobile, amount, note, orderid } = withdrawal;
+    const { account, ifsc, name, mobile, amount, note, orderid, accountNo } =
+      withdrawal;
 
-    // 🔹 Payload for RameePay
+    // 🔹 Payload for RameePay (amount must be string with 2 decimals)
     const payload = {
       account,
       ifsc,
       name,
       mobile,
-      amount: parseFloat(amount).toFixed(2), // "1000.00"
+      amount: parseFloat(amount).toFixed(2), // e.g. "1000.00"
       note,
       orderid,
     };
 
+    // Encrypt
     const encryptedData = encryptData(payload);
     const body = { reqData: encryptedData, agentCode: AGENT_CODE };
 
+    // Call API
     const { data } = await axios.post(RAMEEPAY_WITHDRAWAL_API, body, {
       headers: { "Content-Type": "application/json" },
     });
 
-    let decryptedResponse = {};
-    console.log(data);
+    console.log("🔒 Raw RameePay Response:", data);
 
+    let decryptedResponse = {};
     if (data.data) {
       decryptedResponse = decryptData(data.data);
     }
 
-    console.log("🔓 RameePay Response:", decryptedResponse);
+    console.log("🔓 Decrypted RameePay Response:", decryptedResponse);
 
+    // ✅ Check based on decryptedResponse.success
     if (decryptedResponse && decryptedResponse.success === true) {
-      // ✅ Mark as completed
       withdrawal.status = "Completed";
       withdrawal.response = decryptedResponse;
       await withdrawal.save();
@@ -268,11 +271,11 @@ router.post("/approve/:id", async (req, res) => {
 
       return res.json({
         success: true,
-        message: "Withdrawal completed",
-        decryptedResponse,
+        message: decryptedResponse.message || "Withdrawal completed",
+        response: decryptedResponse,
       });
     } else {
-      // ❌ Failed → refund MoneyPlant
+      // ❌ Failed → refund via MoneyPlant
       const usdRate = await fetchRate();
       const amountUSD = (parseFloat(amount) * usdRate).toFixed(2);
       const refundOrderId = `RF${Date.now()}`;
@@ -280,7 +283,7 @@ router.post("/approve/:id", async (req, res) => {
       await axios.post(
         "https://api.moneyplantfx.com/WSMoneyplant.aspx?type=SNDPAddBalance",
         {
-          accountno: withdrawal.accountNo,
+          accountno: accountNo,
           amount: +Math.abs(amountUSD),
           orderid: refundOrderId,
         },
@@ -293,8 +296,9 @@ router.post("/approve/:id", async (req, res) => {
 
       return res.json({
         success: false,
-        message: "Withdrawal failed, amount refunded",
-        decryptedResponse,
+        message:
+          decryptedResponse?.message || "Withdrawal failed, amount refunded",
+        response: decryptedResponse,
       });
     }
   } catch (err) {
