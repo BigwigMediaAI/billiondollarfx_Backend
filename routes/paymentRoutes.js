@@ -303,6 +303,8 @@ router.post("/approve/:id", async (req, res) => {
     }
   } catch (err) {
     console.error("RameePay error:", err.response?.data || err.message);
+    const decryptedData = decryptData(err.response?.data);
+    console.log("response:", decryptedData);
     res
       .status(500)
       .json({ success: false, error: "Withdrawal processing failed" });
