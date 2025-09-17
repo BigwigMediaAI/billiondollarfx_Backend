@@ -239,6 +239,7 @@ router.post("/approve/:id", async (req, res) => {
     });
 
     let decryptedResponse = {};
+    console.log(data);
 
     if (data.data) {
       decryptedResponse = decryptData(data.data);
