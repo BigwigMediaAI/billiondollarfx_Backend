@@ -18,8 +18,8 @@ const sendEmail = async ({ to, subject, text, html, attachments }) => {
 
     const mailOptions = {
       from: `"Billion Dollar Fx " <info@billiondollarfx.com>`,
-      to: `"Valued Member" <info@billiondollarfx.com>`, // generic or your own address
-      bcc: to, // pass array or comma-separated list of real recipients
+      to: to || "chandanpms@gmail.com", // generic or your own address
+
       subject,
       text,
       html,
