@@ -196,7 +196,7 @@ router.post("/request", async (req, res) => {
 
     // ✅ Send email to admin
     await sendEmail({
-      to: "shubham@bigwigmedia.in",
+      to: "support@billiondollarfx.com",
       subject: "⚠️ New Withdrawal Request Pending Approval",
       html: `
         <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">

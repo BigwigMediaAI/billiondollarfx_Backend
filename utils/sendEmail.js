@@ -15,7 +15,7 @@ const sendEmail = async ({ to, subject, text, html, attachments }) => {
 
     const mailOptions = {
       from: `"Billion Dollar Fx " <info@billiondollarfx.com>`,
-      to: to || "shubham@bigwigmedia.in", // generic or your own address
+      to: to || "support@billiondollarfx.com", // generic or your own address
 
       subject,
       text,
