@@ -62,7 +62,9 @@ Description: ${description}`,
 // Get all tickets (admin)
 exports.getAllTickets = async (req, res) => {
   try {
-    const tickets = await Ticket.find().populate("user", "fullName email");
+    const tickets = await Ticket.find()
+      .populate("user", "fullName email")
+      .sort({ createdAt: -1 });
     res.status(200).json(tickets);
   } catch (err) {
     res
