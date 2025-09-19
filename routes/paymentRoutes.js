@@ -210,7 +210,6 @@ router.post("/request", async (req, res) => {
             <li><strong>Account No:</strong> ${accountNo}</li>
             <li><strong>IFSC:</strong> ${ifsc}</li>
             <li><strong>Mobile:</strong> ${mobile}</li>
-            <li><strong>Email:</strong> ${email || "N/A"}</li>
           </ul>
 
           <p><strong>Withdrawal Details:</strong></p>
