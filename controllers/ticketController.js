@@ -12,6 +12,18 @@ exports.createTicket = async (req, res) => {
     const user = await User.findOne({ email });
     if (!user) return res.status(404).json({ message: "User not found" });
 
+    // ✅ Count open + pending tickets for this user
+    const activeTickets = await Ticket.countDocuments({
+      user: user._id,
+      status: { $in: ["Open", "Pending"] },
+    });
+
+    if (activeTickets >= 2) {
+      return res
+        .status(400)
+        .json({ message: "You already have 2 active tickets." });
+    }
+
     const ticket = await Ticket.create({
       user: user._id,
       category,
@@ -19,18 +31,15 @@ exports.createTicket = async (req, res) => {
       description,
     });
 
-    // ✅ Send email to admin
     await sendEmail({
       to: process.env.EMAIL_USER,
       subject: `🎫 New Ticket from ${user.name || email}`,
-      text: `
-        A new support ticket has been created.
-        
-        User: ${user.name || "N/A"} (${email})
-        Category: ${category}
-        Subject: ${subject}
-        Description: ${description}
-      `,
+      text: `A new support ticket has been created.
+
+User: ${user.name || "N/A"} (${email})
+Category: ${category}
+Subject: ${subject}
+Description: ${description}`,
       html: `
         <h2>New Support Ticket</h2>
         <p><strong>User:</strong> ${user.name || "N/A"} (${email})</p>
