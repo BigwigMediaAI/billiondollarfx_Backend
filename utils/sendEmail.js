@@ -11,14 +11,11 @@ const sendEmail = async ({ to, subject, text, html, attachments }) => {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
       },
-      tls: {
-        rejectUnauthorized: false, // Optional, safer to test without it first
-      },
     });
 
     const mailOptions = {
       from: `"Billion Dollar Fx " <info@billiondollarfx.com>`,
-      to: to || "chandanpms@gmail.com", // generic or your own address
+      to: to || "shubham@bigwigmedia.in", // generic or your own address
 
       subject,
       text,
