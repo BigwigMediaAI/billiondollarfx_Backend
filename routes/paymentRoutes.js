@@ -378,19 +378,18 @@ router.post("/approve/:id", async (req, res) => {
       });
     }
   } catch (err) {
-    if (
-      err.response?.data?.data &&
-      typeof err.response.data.data === "string"
-    ) {
-      const decryptedData = decryptData(err.response.data.data);
-      console.log("response:", decryptedData);
-    } else {
-      console.log("Raw error response:", err.response?.data);
-    }
+    console.error("Withdrawal approval error:", err);
 
-    res
-      .status(500)
-      .json({ success: false, error: "Withdrawal processing failed" });
+    const decryptedData =
+      err.response?.data?.data && typeof err.response.data.data === "string"
+        ? decryptData(err.response.data.data)
+        : null;
+
+    res.status(500).json({
+      success: false,
+      error:
+        decryptedData?.message || err.message || "Withdrawal processing failed",
+    });
   }
 });
 
@@ -454,10 +453,18 @@ router.post("/reject/:id", async (req, res) => {
 
     res.json({ success: true, message: "Withdrawal rejected & refunded" });
   } catch (err) {
-    console.error("❌ Reject withdrawal error:", err.message);
-    res
-      .status(500)
-      .json({ success: false, error: "Failed to reject withdrawal" });
+    console.error(
+      "❌ Reject withdrawal error:",
+      err.message,
+      err.response?.data
+    );
+    res.status(500).json({
+      success: false,
+      error:
+        err.response?.data?.message ||
+        err.message ||
+        "Failed to reject withdrawal",
+    });
   }
 });
 
