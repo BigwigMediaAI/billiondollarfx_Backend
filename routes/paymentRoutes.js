@@ -10,6 +10,7 @@ const { encryptData, decryptData } = require("../utils/rameeCrypto");
 require("dotenv").config();
 const Order = require("../models/Order");
 const Withdrawal = require("../models/withdrawal");
+const Account = require("../models/account.model");
 const User = require("../models/User");
 const sendEmail = require("../utils/sendEmail");
 
@@ -98,11 +99,25 @@ router.post("/ramee/deposit", async (req, res) => {
     // 1️⃣ Generate unique orderid
     const orderid = "ORD" + Date.now();
 
-    // 2️⃣ Save in DB (map orderid → accountNo & amount)
-    const newOrder = new Order({ orderid, accountNo, amount });
+    // 2️⃣ Find account (to save reference)
+    const account = await Account.findOne({ accountNo });
+    if (!account) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Account not found" });
+    }
+
+    // 3️⃣ Save new order
+    const newOrder = new Order({
+      orderid,
+      account: account._id, // ✅ link to Account
+      accountNo: account.accountNo, // backup string
+      amount,
+      status: "PENDING", // default
+    });
     await newOrder.save();
 
-    // 3️⃣ Prepare payload for RameePay (only orderid & amount required)
+    // 4️⃣ Prepare payload for RameePay (only orderid & amount required)
     const orderData = { orderid, amount };
 
     // Encrypt payload
@@ -113,29 +128,40 @@ router.post("/ramee/deposit", async (req, res) => {
       agentCode: AGENT_CODE,
     };
 
-    // 4️⃣ Send to RameePay
+    //  5️⃣ Send to RameePay
     const { data } = await axios.post(RAMEEPAY_API, body, {
       headers: { "Content-Type": "application/json" },
     });
 
-    // Decrypt response if exists
+    // 6️⃣Decrypt response if exists
     let decryptedResponse = {};
     if (data.data) {
       decryptedResponse = decryptData(data.data);
       console.log("✅ Decrypted Response:", decryptedResponse);
     }
 
-    // 5️⃣ Return response to frontend
+    // 7️⃣ Return response to frontend
     res.json({
       success: true,
       message: "Order created & sent to RameePay",
-      order: newOrder,
+      order: {
+        orderid: newOrder.orderid,
+        amount: newOrder.amount,
+        status: newOrder.status,
+        createdAt: newOrder.createdAt,
+        accountNo: newOrder.accountNo,
+        name: account.user?.fullName || "Unknown", // ✅ now included
+      },
       raw: data,
       decrypted: decryptedResponse,
     });
   } catch (err) {
     console.error("❌ Deposit Error:", err.response?.data || err.message);
-    res.status(500).json({ success: false, error: "Deposit failed" });
+    res.status(500).json({
+      success: false,
+      error: "ServerError",
+      message: err.message,
+    });
   }
 });
 
@@ -500,20 +526,38 @@ router.get("/withdrawal/:accountNo", async (req, res) => {
 
 router.get("/deposit", async (req, res) => {
   try {
-    // Find all deposits for this account, sorted by latest first
-    const deposits = await Order.find().sort({ createdAt: -1 });
+    const deposits = await Order.find()
+      .sort({ createdAt: -1 })
+      .populate({
+        path: "account",
+        select: "accountNo balance user", // pick only what you need
+        populate: {
+          path: "user",
+          select: "fullName email", // adjust based on your User schema
+        },
+      });
 
     if (!deposits || deposits.length === 0) {
       return res.status(404).json({
         success: false,
-        message: "No deposits found ",
+        message: "No deposits found",
       });
     }
 
+    const formatted = deposits.map((d) => ({
+      orderid: d.orderid,
+      amount: d.amount,
+      status: d.status,
+      createdAt: d.createdAt,
+      accountNo: d.account?.accountNo || d.accountNo, // fallback
+      balance: d.account?.balance || 0,
+      userName: d.account?.user?.fullName || "Unknown",
+    }));
+
     res.status(200).json({
       success: true,
-      count: deposits.length,
-      deposits,
+      count: formatted.length,
+      deposits: formatted,
     });
   } catch (err) {
     console.error("❌ Error fetching deposits:", err.message);
